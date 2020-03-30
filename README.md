@@ -9,5 +9,10 @@ As of the time I started working on this project, there was no PyTorch implement
 ### RoadMap
 - [ ] Model Architecture that would match the original paper
 - [ ] COCO train script 
-- [ ] port weights from TensorFlow
+- [ ] Reproduce results from the paper
+- [ ] Port weights from TensorFlow
 - [ ] Pretrained weights release
+
+### References
+- EfficientDet: Scalable and Efficient Object Detection [arXiv:1911.09070](https://arxiv.org/abs/1911.09070)
+- PyTorch EfficientNet implementation by [lukemelas](https://github.com/lukemelas/EfficientNet-PyTorch)
