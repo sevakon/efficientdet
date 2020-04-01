@@ -30,6 +30,8 @@ class EfficientDet(nn.Module):
 
 if __name__ == '__main__':
     """ Quick test on parameters number """
+    true_params = ['3.9M', '6.6M', '8.1M', '12.0M', '20.7M', '34.3M', '51.9M']
+
     for phi in [0, 1, 2, 3, 4, 5, 6]:
         model_name = 'efficientdet-d' + str(phi)
         model = EfficientDet(model_name)
@@ -37,4 +39,4 @@ if __name__ == '__main__':
         model_parameters = filter(lambda p: p.requires_grad, model.parameters())
         params = sum([np.prod(p.size()) for p in model_parameters])
 
-        print('Phi: {}, params: {}M'.format(phi, params / 1000000))
+        print('Phi: {}, params: {}M, true params: {}'.format(phi, params / 1000000, true_params[phi]))
