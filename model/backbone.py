@@ -28,6 +28,14 @@ class EfficientNet(nn.Module):
 
         return features[1:]
 
+    def get_channels_list(self):
+        channels = []
+        for block in self.model._blocks:
+            if block._block_args.stride == [2]:
+                channels.append(block._block_args.output_filters)
+
+        return channels[1:]
+
 
 if __name__ == '__main__':
     ''' quick test '''

@@ -1,4 +1,5 @@
 
+
 def efficientdet_params(model_name):
     """ Map EfficientDet model name to parameter coefficients. """
     params_dict = {
