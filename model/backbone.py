@@ -39,6 +39,5 @@ class EfficientNet(nn.Module):
 
 if __name__ == '__main__':
     ''' quick test '''
-    # 3.595388M
 
     backbone = EfficientNet('')

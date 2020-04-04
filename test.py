@@ -15,13 +15,14 @@ for phi in [0, 1, 2, 3, 4, 5, 6]:
 
     image_size = efficientdet_params(model_name)['R_input']
     x = torch.rand(1, 3, image_size, image_size).to('cpu')
-    features = model(x)
 
-    print(' Input: {}'.format(x.shape))
+    features = model.backbone(x)
+    box_outputs, cls_outputs = model(x)
 
-    print(model.backbone.get_channels_list())
-    for idx, p in enumerate(features):
-        print(' P{}: {}'.format(idx + 1, p.shape))
+    # print(' Input: {}'.format(x.shape))
+    #
+    # for idx, p in enumerate(features):
+    #     print(' P{}: {}'.format(idx + 1, p.shape))
 
     print('Phi: {}, params: {}M, params in paper: {}'.format(phi, params / 1000000,
                                                          efficientdet_params(model_name)['params']))

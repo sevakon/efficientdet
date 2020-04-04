@@ -6,7 +6,8 @@ import torch.nn.functional as F
 from model.backbone import EfficientNet
 from model.bifpn import BiFPN
 from model.utils import efficientdet_params, check_model_name
-from model.module import *
+from model.head import Classifier, Regresser
+from model.module import ChannelAdjuster
 
 
 class EfficientDet(nn.Module):
@@ -21,15 +22,20 @@ class EfficientDet(nn.Module):
         self.bifpn = nn.Sequential(*[BiFPN(self.params['W_bifpn'])
                                      for _ in range(self.params['D_bifpn'])])
 
-        self.regresser = None
-        self.classifier = None
+        self.regresser = Regresser(self.params['W_bifpn'], self.params['D_class'])
+        self.classifier = Classifier(self.params['W_bifpn'], self.params['D_class'])
 
     def forward(self, x):
         features = self.backbone(x)
         features = self.adjuster(features)
         features = self.bifpn(features)
 
-        return features
+        box_outputs, cls_outputs = [], []
+        for f_map in features:
+            box_outputs.append(self.regresser(f_map))
+            cls_outputs.append(self.classifier(f_map))
+
+        return box_outputs, cls_outputs
 
     def load_backbone(self, path):
         self.backbone.load_state_dict(torch.load(path), strict=True)

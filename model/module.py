@@ -9,7 +9,7 @@ class ConvModule(nn.Module):
         super(ConvModule, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
-                      padding=padding),
+                      padding=padding, bias=False),
             nn.BatchNorm2d(out_channels, eps=1e-04, momentum=0.997)
         )
 
@@ -24,9 +24,9 @@ class DepthWiseSeparableConvModule(nn.Module):
         super(DepthWiseSeparableConvModule, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1,
-                      padding=1, groups=in_channels),
-            nn.Conv2d(in_channels, in_channels, kernel_size=1, stride=1,
-                      padding=0),
+                      padding=1, groups=in_channels, bias=False),
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1,
+                      padding=0, bias=False),
             nn.BatchNorm2d(out_channels, eps=1e-04, momentum=0.997)
         )
 

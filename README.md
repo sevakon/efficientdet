@@ -7,7 +7,7 @@ https://arxiv.org/abs/1911.09070
 As of the time I started working on this project, there was no PyTorch implementation on GitHub that would match the original paper in the number of the model's parameters.
 
 ### RoadMap
-- [ ] Model Architecture that would match the original paper
+- [X] Model Architecture that would match the original paper
 - [ ] COCO train script 
 - [ ] Reproduce results from the paper
 - [ ] Port weights from TensorFlow
