@@ -6,10 +6,9 @@ from model.module import DepthWiseSeparableConvModule as DWSConv
 
 
 class Regresser(nn.Module):
-    def __init__(self, in_channels, n_repeats, n_anchors=9, n_features=88):
+    def __init__(self, n_features, n_repeats, n_anchors=9):
         super(Regresser, self).__init__()
-        layers = [DWSConv(in_channels, n_features)] + \
-                 [DWSConv(n_features, n_features) for _ in range(n_repeats - 1)]
+        layers = [DWSConv(n_features, n_features) for _ in range(n_repeats)]
 
         self.layers = nn.Sequential(*layers)
         self.head = nn.Sequential(
@@ -25,10 +24,9 @@ class Regresser(nn.Module):
 
 
 class Classifier(nn.Module):
-    def __init__(self, in_channels, n_repeats, n_anchors=9, n_features=88, n_classes=90):
+    def __init__(self, n_features, n_repeats, n_anchors=9, n_classes=90):
         super(Classifier, self).__init__()
-        layers = [DWSConv(in_channels, n_features)] + \
-                 [DWSConv(n_features, n_features) for _ in range(n_repeats - 1)]
+        layers = [DWSConv(n_features, n_features) for _ in range(n_repeats)]
 
         self.layers = nn.Sequential(*layers)
         self.head = nn.Sequential(
@@ -39,5 +37,5 @@ class Classifier(nn.Module):
     def forward(self, inputs):
         inputs = self.layers(inputs)
         inputs = self.head(inputs)
-        out = torch.sigmoid(inputs)
+        out = inputs
         return out

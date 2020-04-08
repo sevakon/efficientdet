@@ -1,29 +1,29 @@
+import time
 import torch
 from model.backbone import EfficientNet
 import numpy as np
 from model.det import EfficientDet
-from model.utils import efficientdet_params
+from model.utils import efficientdet_params, count_parameters
+
 
 """ Quick test on parameters number """
 
-for phi in [0, 1, 2, 3, 4, 5, 6]:
+# for phi in [0, 1, 2, 3, 4, 5, 6]:
+for phi in [0, 1, 2, 3, 4, 5]:
     model_name = 'efficientdet-d' + str(phi)
     model = EfficientDet(model_name).to('cpu')
 
-    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
+    model.train()
+    params = count_parameters(model)
 
-    image_size = efficientdet_params(model_name)['R_input']
-    x = torch.rand(1, 3, image_size, image_size).to('cpu')
-
-    features = model.backbone(x)
-    box_outputs, cls_outputs = model(x)
-
-    # print(' Input: {}'.format(x.shape))
-    #
-    # for idx, p in enumerate(features):
-    #     print(' P{}: {}'.format(idx + 1, p.shape))
-
-    print('Phi: {}, params: {}M, params in paper: {}'.format(phi, params / 1000000,
+    print('Phi: {}, params: {:.6f}M, params in paper: {}'.format(phi, params / 1e6,
                                                          efficientdet_params(model_name)['params']))
+    print('   Backbone: {:.6f}M'.format(count_parameters(model.backbone) / 1e6))
+    print('   Adjuster: {:.6f}M'.format(count_parameters(model.adjuster) / 1e6))
+    print('      BiFPN: {:.6f}M'.format(count_parameters(model.bifpn) / 1e6))
+    print('       Head: {:.6f}M'.format((count_parameters(model.classifier) +
+                                        count_parameters(model.regresser)) / 1e6))
 
+    # image_size = efficientdet_params(model_name)['R_input']
+    # x = torch.rand(1, 3, image_size, image_size)
+    # model(x)

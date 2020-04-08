@@ -23,18 +23,29 @@ class EfficientNet(nn.Module):
             if drop_connect_rate:
                 drop_connect_rate *= float(idx) / len(self.model._blocks)
             x = block(x, drop_connect_rate=drop_connect_rate)
-            if block._depthwise_conv.stride == [2, 2]:
+
+            if idx == len(self.model._blocks) - 1:
                 features.append(x)
 
-        return features[1:]
+            else:
+                next_block = self.model._blocks[idx + 1]
+                if next_block._depthwise_conv.stride == [2, 2]:
+                    features.append(x)
+
+        return features[2:]
 
     def get_channels_list(self):
         channels = []
-        for block in self.model._blocks:
-            if block._block_args.stride == [2]:
+        for idx, block in enumerate(self.model._blocks):
+            if idx == len(self.model._blocks) - 1:
                 channels.append(block._block_args.output_filters)
 
-        return channels[1:]
+            else:
+                next_block = self.model._blocks[idx + 1]
+                if next_block._block_args.stride == [2]:
+                    channels.append(block._block_args.output_filters)
+
+        return channels[2:]
 
 
 if __name__ == '__main__':

@@ -36,47 +36,59 @@ class BiFPN(nn.Module):
 
         # Top Down Path
         p_6_td = self.conv_6_td(
-            self._fuse_two_features(self.weights_6_td, p_6,
-                                    F.interpolate(p_7, scale_factor=2))
+            self._fuse_features(
+                weights=self.weights_6_td,
+                features=[p_6, F.interpolate(p_7, scale_factor=2)]
+            )
         )
         p_5_td = self.conv_5_td(
-            self._fuse_two_features(self.weights_5_td, p_5,
-                                    F.interpolate(p_6_td, scale_factor=2))
+            self._fuse_features(
+                weights=self.weights_5_td,
+                features=[p_5, F.interpolate(p_6_td, scale_factor=2)]
+            )
         )
         p_4_td = self.conv_4_td(
-            self._fuse_two_features(self.weights_4_td, p_4,
-                                    F.interpolate(p_5_td, scale_factor=2))
+            self._fuse_features(
+                weights=self.weights_4_td,
+                features=[p_4, F.interpolate(p_5_td, scale_factor=2)]
+            )
         )
 
         # Out
         p_3_out = self.conv_3_out(
-            self._fuse_two_features(self.weights_3_out, p_3,
-                                    F.interpolate(p_4_td, scale_factor=2))
+            self._fuse_features(
+                weights=self.weights_3_out,
+                features=[p_3, F.interpolate(p_4_td, scale_factor=2)]
+            )
         )
         p_4_out = self.conv_4_out(
-            self._fuse_three_features(self.weights_4_out, p_4,
-                                      p_4_td, F.max_pool2d(p_3_out, 2))
+            self._fuse_features(
+                weights=self.weights_4_out,
+                features=[p_4, p_4_td, F.max_pool2d(p_3_out, 2)]
+            )
         )
         p_5_out = self.conv_5_out(
-            self._fuse_three_features(self.weights_5_out, p_5,
-                                      p_5_td, F.max_pool2d(p_4_out, 2))
+            self._fuse_features(
+                weights=self.weights_5_out,
+                features=[p_5, p_5_td, F.max_pool2d(p_4_out, 2)]
+            )
         )
         p_6_out = self.conv_6_out(
-            self._fuse_three_features(self.weights_6_out, p_6,
-                                      p_6_td, F.max_pool2d(p_5_out, 2))
+            self._fuse_features(
+                weights=self.weights_6_out,
+                features=[p_6, p_6_td, F.max_pool2d(p_5_out, 2)]
+            )
         )
-        p_7_out = self.conv_6_out(
-            self._fuse_two_features(self.weights_7_out,
-                                    p_7, F.max_pool2d(p_6, 2))
+        p_7_out = self.conv_7_out(
+            self._fuse_features(
+                weights=self.weights_7_out,
+                features=[p_7, F.max_pool2d(p_6, 2)]
+            )
         )
 
         return [p_3_out, p_4_out, p_5_out, p_6_out, p_7_out]
 
-    def _fuse_two_features(self, weights, f1, f2):
-        w1 = F.relu(weights[0]); w2 = F.relu(weights[1])
-        return (w1 * f1 + w2 * f2) / (w1 + w2 + self.eps)
-
-    def _fuse_three_features(self, weights, f1, f2, f3):
-        for w in weights:
-            w = F.relu(w)
-        return (weights[0] * f1 + weights[1] * f2 + weights[2] * f3) / (sum(weights) + self.eps)
+    def _fuse_features(self, weights, features):
+        num = sum([F.relu(w) * f for w, f in zip(weights, features)])
+        det = sum(weights) + self.eps
+        return num / det
