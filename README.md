@@ -1,6 +1,6 @@
 # EfficientDet: Scalable and Efficient Object Detection
 
-### PyTorch Implementation of the state-of-the-art object detection architecture for EfficientDet 
+### PyTorch Implementation of the state-of-the-art object detection architecture EfficientDet 
 https://arxiv.org/abs/1911.09070
 
 <img src="https://sun9-35.userapi.com/c205628/v205628726/d29b4/gTjpU4gj2zc.jpg">
