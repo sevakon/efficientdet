@@ -6,6 +6,13 @@ from model.module import DepthWiseSeparableConvModule as DWSConv
 
 
 class BiFPN(nn.Module):
+    """
+    BiFPN block.
+    Depending on its order, it either accepts
+    seven feature maps (if this block is the first block in FPN)
+    or five feature maps (otherwise)
+    """
+
     eps: float = 1e-04
 
     def __init__(self, n_channels):
@@ -32,7 +39,11 @@ class BiFPN(nn.Module):
         self.weights_7_out = nn.Parameter(torch.ones(2))
 
     def forward(self, features):
-        p_3, p_4, p_5, p_6, p_7 = features
+        if len(features) == 5:
+            p_3, p_4, p_5, p_6, p_7 = features
+            p_4_2, p_5_2 = None, None
+        else:
+            p_3, p_4, p_4_2, p_5, p_5_2, p_6, p_7 = features
 
         # Top Down Path
         p_6_td = self.conv_6_td(
@@ -54,6 +65,9 @@ class BiFPN(nn.Module):
             )
         )
 
+        p_4_in = p_4 if p_4_2 is None else p_4_2
+        p_5_in = p_5 if p_5_2 is None else p_5_2
+
         # Out
         p_3_out = self.conv_3_out(
             self._fuse_features(
@@ -64,13 +78,13 @@ class BiFPN(nn.Module):
         p_4_out = self.conv_4_out(
             self._fuse_features(
                 weights=self.weights_4_out,
-                features=[p_4, p_4_td, F.max_pool2d(p_3_out, 2)]
+                features=[p_4_in, p_4_td, F.max_pool2d(p_3_out, 2)]
             )
         )
         p_5_out = self.conv_5_out(
             self._fuse_features(
                 weights=self.weights_5_out,
-                features=[p_5, p_5_td, F.max_pool2d(p_4_out, 2)]
+                features=[p_5_in, p_5_td, F.max_pool2d(p_4_out, 2)]
             )
         )
         p_6_out = self.conv_6_out(

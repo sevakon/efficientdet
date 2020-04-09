@@ -38,15 +38,17 @@ class DepthWiseSeparableConvModule(nn.Module):
 
 class ChannelAdjuster(nn.Module):
     """ Adjusts number of channels before BiFPN via 1x1 conv layers
-    Also creates P6 and P7 feature maps """
+    Creates P3, P4, P4_2, P5, P5_2, P6 and P7 feature maps  for use in BiFPN """
     def __init__(self, in_channels: list, out_channels: int):
         super(ChannelAdjuster, self).__init__()
         assert isinstance(in_channels, list), 'in_channels should be a list'
         assert isinstance(out_channels, int), 'out_channels should be an integer'
 
         self.convs = nn.ModuleList()
-        for n_channels in in_channels:
+        for idx, n_channels in enumerate(in_channels):
             self.convs.append(ConvModule(n_channels, out_channels))
+            if idx > 0:
+                self.convs.append(ConvModule(n_channels, out_channels))
 
         self.p5_to_p6 = nn.Sequential(
             ConvModule(in_channels[-1], out_channels),
@@ -55,9 +57,18 @@ class ChannelAdjuster(nn.Module):
         self.p6_to_p7 = nn.MaxPool2d(2)
 
     def forward(self, features):
+        """ param: features: a list of P3, P4, P5 feature maps from backbone
+            returns: outs: P3, P4, P4_2, P5, P5_2, P6, P7 feature maps """
         outs = []
-        for idx, feature in enumerate(features):
-            outs.append(self.convs[idx](feature))
+        conv_idx = 0
+        for feature in features:
+            outs.append(self.convs[conv_idx](feature))
+
+            if conv_idx > 0:
+                conv_idx += 1
+                outs.append(self.convs[conv_idx](feature))
+
+            conv_idx += 1
 
         outs.append(self.p5_to_p6(features[-1]))
         outs.append(self.p6_to_p7(outs[-1]))
