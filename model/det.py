@@ -1,19 +1,21 @@
 import torch
 import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
+from itertools import chain
 
+import config as cfg
 from model.backbone import EfficientNet
 from model.bifpn import BiFPN
-from model.utils import efficientdet_params, check_model_name
-from model.head import Classifier, Regresser
+from model.head import HeadNet
 from model.module import ChannelAdjuster
+from model.utils import efficientdet_params, check_model_name, download_model_weights
 
 
 class EfficientDet(nn.Module):
     def __init__(self, name):
         super(EfficientDet, self).__init__()
         check_model_name(name)
+
         self.params = efficientdet_params(name)
         self.backbone = EfficientNet(self.params['backbone'])
 
@@ -22,27 +24,56 @@ class EfficientDet(nn.Module):
         self.bifpn = nn.Sequential(*[BiFPN(self.params['W_bifpn'])
                                      for _ in range(self.params['D_bifpn'])])
 
-        self.regresser = Regresser(self.params['W_bifpn'], self.params['D_class'])
-        self.classifier = Classifier(self.params['W_bifpn'], self.params['D_class'])
+        self.regresser = HeadNet(n_features=self.params['W_bifpn'],
+                                 out_channels=cfg.NUM_ANCHORS * 4,
+                                 n_repeats=self.params['D_class'])
+
+        self.classifier = HeadNet(n_features=self.params['W_bifpn'],
+                                  out_channels=cfg.NUM_ANCHORS * cfg.NUM_CLASSES,
+                                  n_repeats=self.params['D_class'])
 
     def forward(self, x):
         features = self.backbone(x)
+
         features = self.adjuster(features)
         features = self.bifpn(features)
 
-        box_outputs, cls_outputs = [], []
-        for f_map in features:
-            box_outputs.append(self.regresser(f_map))
-            cls_outputs.append(self.classifier(f_map))
+        box_outputs = self.regresser(features)
+        cls_outputs = self.classifier(features)
 
         return box_outputs, cls_outputs
 
+    def initialize_weights(self):
+        """ Initialize Model Weights before training from scratch """
+        for module in chain(self.adjuster.modules(),
+                            self.bifpn.modules(),
+                            self.regresser.modules(),
+                            self.classifier.modules()):
+            if isinstance(module, nn.Conv2d):
+                nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+            if isinstance(module, nn.BatchNorm2d):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+
+        nn.init.zeros_(self.regresser.head.conv_pw.bias)
+        nn.init.constant_(self.classifier.head.conv_pw.bias, -np.log((1 - 0.01) / 0.01))
+
     def load_backbone(self, path):
-        self.backbone.load_state_dict(torch.load(path), strict=True)
+        self.backbone.model.load_state_dict(torch.load(path), strict=True)
+
+    def load_weights(self, path):
+        self.load_state_dict(torch.load(path))
 
     @staticmethod
-    def load_from_name(name):
-        pass
+    def from_pretrained(name=cfg.MODEL_NAME):
+        check_model_name(name)
+
+        if not cfg.MODEL_WEIGHTS.exists():
+            download_model_weights(name, cfg.MODEL_WEIGHTS)
+
+        model_to_return = EfficientDet(name)
+        model_to_return.load_weights(cfg.MODEL_WEIGHTS)
+        return model_to_return
 
 
 if __name__ == '__main__':

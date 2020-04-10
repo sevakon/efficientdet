@@ -7,32 +7,37 @@ class ConvModule(nn.Module):
     """ Regular Convolution with BatchNorm """
     def __init__(self, in_channels, out_channels, kernel_size=1, padding=0):
         super(ConvModule, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
-                      padding=padding, bias=False),
-            nn.BatchNorm2d(out_channels, eps=1e-4, momentum=0.003)
-        )
+        self.conv = nn.Conv2d(in_channels, out_channels,
+                              kernel_size=kernel_size,
+                              padding=padding, bias=False)
+        self.bn = nn.BatchNorm2d(out_channels, eps=1e-3, momentum=0.01)
 
     def forward(self, x):
         x = self.conv(x)
+        x = self.bn(x)
         return x
 
 
 class DepthWiseSeparableConvModule(nn.Module):
     """ DepthWise Separable Convolution with BatchNorm and ReLU activation """
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, bath_norm=True, relu=True, bias=False):
         super(DepthWiseSeparableConvModule, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1,
-                      padding=1, groups=in_channels, bias=False),
-            nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1,
-                      padding=0, bias=False),
-            nn.BatchNorm2d(out_channels, eps=1e-4, momentum=0.003)
-        )
+        self.conv_dw = nn.Conv2d(in_channels, in_channels, kernel_size=3,
+                                 padding=1, groups=in_channels, bias=False)
+        self.conv_pw = nn.Conv2d(in_channels, out_channels, kernel_size=1,
+                                 padding=0, bias=bias)
+
+        self.bn = None if bath_norm is False else \
+            nn.BatchNorm2d(out_channels, eps=1e-3, momentum=0.01)
+        self.relu = relu
 
     def forward(self, x):
-        x = self.conv(x)
-        x = F.relu(x)
+        x = self.conv_dw(x)
+        x = self.conv_pw(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.relu:
+            x = F.relu(x)
         return x
 
 
