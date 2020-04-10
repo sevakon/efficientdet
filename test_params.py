@@ -1,19 +1,18 @@
 import torch
 from model import EfficientDet
 import config as cfg
-from model.utils import efficientdet_params, count_parameters
+from model.utils import count_parameters
 
 
 """ Quick test on parameters number """
 
-
 model = EfficientDet.from_pretrained().to('cpu')
 
-model.train()
+model.eval()
 params = count_parameters(model)
 
 print('Model: {}, params: {:.6f}M, params in paper: {}'.format(cfg.MODEL_NAME, params / 1e6,
-                                                     efficientdet_params(cfg.MODEL_NAME)['params']))
+                                                     cfg.PARAMS))
 print('   Backbone: {:.6f}M'.format(count_parameters(model.backbone) / 1e6))
 print('   Adjuster: {:.6f}M'.format(count_parameters(model.adjuster) / 1e6))
 print('      BiFPN: {:.6f}M'.format(count_parameters(model.bifpn) / 1e6))
@@ -22,8 +21,7 @@ print('       Head: {:.6f}M'.format((count_parameters(model.classifier) +
 
 # model.initialize_weights()
 
-image_size = efficientdet_params(cfg.MODEL_NAME)['R_input']
-x = torch.rand(1, 3, image_size, image_size)
+x = torch.rand(1, 3, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE)
 box, cls = model(x)
 
 for b, c in zip(box, cls):

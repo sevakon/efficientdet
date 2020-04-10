@@ -8,7 +8,7 @@ from model.backbone import EfficientNet
 from model.bifpn import BiFPN
 from model.head import HeadNet
 from model.module import ChannelAdjuster
-from model.utils import efficientdet_params, check_model_name, download_model_weights
+from model.utils import check_model_name, download_model_weights
 
 
 class EfficientDet(nn.Module):
@@ -16,21 +16,20 @@ class EfficientDet(nn.Module):
         super(EfficientDet, self).__init__()
         check_model_name(name)
 
-        self.params = efficientdet_params(name)
-        self.backbone = EfficientNet(self.params['backbone'])
+        self.backbone = EfficientNet(cfg.BACKBONE)
 
         self.adjuster = ChannelAdjuster(self.backbone.get_channels_list(),
-                                        self.params['W_bifpn'])
-        self.bifpn = nn.Sequential(*[BiFPN(self.params['W_bifpn'])
-                                     for _ in range(self.params['D_bifpn'])])
+                                        cfg.W_BIFPN)
+        self.bifpn = nn.Sequential(*[BiFPN(cfg.W_BIFPN)
+                                     for _ in range(cfg.D_BIFPN)])
 
-        self.regresser = HeadNet(n_features=self.params['W_bifpn'],
+        self.regresser = HeadNet(n_features=cfg.W_BIFPN,
                                  out_channels=cfg.NUM_ANCHORS * 4,
-                                 n_repeats=self.params['D_class'])
+                                 n_repeats=cfg.D_CLASS)
 
-        self.classifier = HeadNet(n_features=self.params['W_bifpn'],
+        self.classifier = HeadNet(n_features=cfg.W_BIFPN,
                                   out_channels=cfg.NUM_ANCHORS * cfg.NUM_CLASSES,
-                                  n_repeats=self.params['D_class'])
+                                  n_repeats=cfg.D_CLASS)
 
     def forward(self, x):
         features = self.backbone(x)
@@ -38,10 +37,10 @@ class EfficientDet(nn.Module):
         features = self.adjuster(features)
         features = self.bifpn(features)
 
-        box_outputs = self.regresser(features)
         cls_outputs = self.classifier(features)
+        box_outputs = self.regresser(features)
 
-        return box_outputs, cls_outputs
+        return cls_outputs, box_outputs
 
     def initialize_weights(self):
         """ Initialize Model Weights before training from scratch """
@@ -66,12 +65,11 @@ class EfficientDet(nn.Module):
 
     @staticmethod
     def from_pretrained(name=cfg.MODEL_NAME):
-        check_model_name(name)
+        model_to_return = EfficientDet(name)
 
         if not cfg.MODEL_WEIGHTS.exists():
             download_model_weights(name, cfg.MODEL_WEIGHTS)
 
-        model_to_return = EfficientDet(name)
         model_to_return.load_weights(cfg.MODEL_WEIGHTS)
         return model_to_return
 
