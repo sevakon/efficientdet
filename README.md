@@ -28,6 +28,15 @@ As of the time I started working on this project, there was no PyTorch implement
 - [ ] Reproduce results from the paper
 - [ ] Pre-trained weights release
 
+### Download COCO2017 Validation Set
+```bash
+wget http://images.cocodataset.org/zips/val2017.zip
+unzip val2017.zip && mv val2017 data/coco && rm val2017.zip
+
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations_trainval2017.zip
+```
+
 ### References
 - EfficientDet: Scalable and Efficient Object Detection [arXiv:1911.09070](https://arxiv.org/abs/1911.09070)
 - EfficientDet implementation in TensorFlow by [Google AutoML](https://github.com/google/automl/tree/master/efficientdet)
