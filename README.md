@@ -31,7 +31,7 @@ As of the time I started working on this project, there was no PyTorch implement
 ### Download COCO2017 Validation Set
 ```bash
 wget http://images.cocodataset.org/zips/val2017.zip
-unzip val2017.zip && mv val2017 data/coco && rm val2017.zip
+unzip val2017.zip && mv val2017 data/coco/val2017 && rm val2017.zip
 
 wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations_trainval2017.zip
