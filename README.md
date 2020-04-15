@@ -17,7 +17,7 @@ Here is my attempt to reproduce EfficientDet in PyTorch.
 ### Notes on Implementation
 Alternatively to the TensorFlow implementation, I got rid of the useless biases
 in convolutional layers followed by batch normalization, which resulted in 
-**parameters reduction**
+**parameters reduction**.
 
 ### Model Zoo
 | Model Name | Weights | #params | #params paper | val mAP | val mAP paper |
