@@ -7,7 +7,17 @@ https://arxiv.org/abs/1911.09070
 
 
 ### Motivation
-As of the time I started working on this project, there was no PyTorch implementation on GitHub that would match the original paper in the number of the model's parameters.
+As of the time I started working on this project, there was no PyTorch implementation on GitHub that
+ would match the original paper in the number of the model's parameters. 
+All of the existed repositories altered a lot from the recently published TensorFlow 
+implementation by [Brain Team](https://github.com/google/automl/tree/master/efficientdet) (e.g. changing strides in the backbone,
+missing batch normalization layers, no 'same' padding strategy in pooling layers, and others). 
+Here is my attempt to reproduce EfficientDet in PyTorch.
+
+### Notes on Implementation
+Alternatively to the TensorFlow implementation, I got rid of the useless biases
+in convolutional layers followed by batch normalization, which resulted in 
+**parameters reduction**
 
 ### Model Zoo
 | Model Name | Weights | #params | #params paper | val mAP | val mAP paper |
