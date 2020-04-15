@@ -8,7 +8,7 @@ from model.backbone import EfficientNet
 from model.bifpn import BiFPN
 from model.head import HeadNet
 from model.module import ChannelAdjuster
-from model.utils import check_model_name, download_model_weights
+from utils.utils import check_model_name, download_model_weights
 
 
 class EfficientDet(nn.Module):

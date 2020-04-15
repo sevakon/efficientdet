@@ -3,15 +3,16 @@ from pathlib import Path
 
 
 MODEL_ZOO = ['efficientdet-d' + str(phi) for phi in range(7)]
-MODEL_NAME = 'efficientdet-d2'
+MODEL_NAME = 'efficientdet-d1'
 assert MODEL_NAME in MODEL_ZOO, '{} not in model zoo'.format(MODEL_NAME)
 
 BASE_PATH = Path('./')
 DATA_PATH = BASE_PATH / 'data'
 COCO_PATH = DATA_PATH / 'coco'
 WEIGHTS_PATH = BASE_PATH / 'weights'
-# MODEL_WEIGHTS = WEIGHTS_PATH / '{}.pth'.format(MODEL_NAME)
-MODEL_WEIGHTS = WEIGHTS_PATH / 'pretrained{}.pth'.format(MODEL_NAME[-1])
+MODEL_WEIGHTS = WEIGHTS_PATH / '{}.pth'.format(MODEL_NAME)
+
+BATCH_SIZE = 16
 
 ASPECT_RATIOS = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
 NUM_SCALES = 3

@@ -1,7 +1,7 @@
 import torch
 from model import EfficientDet
 import config as cfg
-from model.utils import count_parameters
+from utils.utils import count_parameters
 
 
 """ Quick test on parameters number """
@@ -18,12 +18,3 @@ print('   Adjuster: {:.6f}M'.format(count_parameters(model.adjuster) / 1e6))
 print('      BiFPN: {:.6f}M'.format(count_parameters(model.bifpn) / 1e6))
 print('       Head: {:.6f}M'.format((count_parameters(model.classifier) +
                                     count_parameters(model.regresser)) / 1e6))
-
-# model.initialize_weights()
-
-x = torch.rand(1, 3, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE)
-box, cls = model(x)
-
-for b, c in zip(box, cls):
-    print(b.shape)
-    print(c.shape)
