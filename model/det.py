@@ -42,7 +42,24 @@ class EfficientDet(nn.Module):
 
         return cls_outputs, box_outputs
 
-    def initialize_weights(self):
+    @staticmethod
+    def from_name(name=cfg.MODEL_NAME):
+        model_to_return = EfficientDet(name)
+        # model_to_return._load_backbone()
+        return model_to_return
+
+    @staticmethod
+    def from_pretrained(name=cfg.MODEL_NAME):
+        model_to_return = EfficientDet(name)
+
+        if not cfg.MODEL_WEIGHTS.exists():
+            download_model_weights(name, cfg.MODEL_WEIGHTS)
+
+        model_to_return._load_weights(cfg.MODEL_WEIGHTS)
+        print('Loaded checkpoint {}'.format(cfg.MODEL_WEIGHTS))
+        return model_to_return
+
+    def _initialize_weights(self):
         """ Initialize Model Weights before training from scratch """
         for module in chain(self.adjuster.modules(),
                             self.bifpn.modules(),
@@ -57,21 +74,11 @@ class EfficientDet(nn.Module):
         nn.init.zeros_(self.regresser.head.conv_pw.bias)
         nn.init.constant_(self.classifier.head.conv_pw.bias, -np.log((1 - 0.01) / 0.01))
 
-    def load_backbone(self, path):
+    def _load_backbone(self, path):
         self.backbone.model.load_state_dict(torch.load(path), strict=True)
 
-    def load_weights(self, path):
+    def _load_weights(self, path):
         self.load_state_dict(torch.load(path))
-
-    @staticmethod
-    def from_pretrained(name=cfg.MODEL_NAME):
-        model_to_return = EfficientDet(name)
-
-        if not cfg.MODEL_WEIGHTS.exists():
-            download_model_weights(name, cfg.MODEL_WEIGHTS)
-
-        model_to_return.load_weights(cfg.MODEL_WEIGHTS)
-        return model_to_return
 
 
 if __name__ == '__main__':

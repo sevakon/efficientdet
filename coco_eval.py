@@ -34,7 +34,7 @@ def parse_args():
 
     parser.add_argument('--anno', default='val2017',
                         choices=['train2017', 'val2017', 'test-dev2017'])
-    parser.add_argument('-b', '--batch-size', default=16, type=int)
+    parser.add_argument('-b', '--batch-size', default=8, type=int)
     parser.add_argument('--workers', default=4, type=int)
     parser.add_argument('--results', default='results.json', type=str)
 

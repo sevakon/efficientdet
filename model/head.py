@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 import config as cfg
 from model.module import DepthWiseSeparableConvModule as DWSConv
+from model.efficientnet.utils import MemoryEfficientSwish as Swish
 
 
 class HeadNet(nn.Module):
@@ -23,6 +24,7 @@ class HeadNet(nn.Module):
                 bn_levels.append(bn)
             self.bns.append(bn_levels)
 
+        self.act = Swish()
         self.head = DWSConv(n_features, out_channels, bath_norm=False, relu=False, bias=True)
 
     def forward(self, inputs):
@@ -32,7 +34,7 @@ class HeadNet(nn.Module):
             for conv, bn in zip(self.convs, self.bns):
                 f_map = conv(f_map)
                 f_map = bn[f_idx](f_map)
-                f_map = F.relu(f_map)
+                f_map = self.act(f_map)
             outs.append(self.head(f_map))
 
         return outs
