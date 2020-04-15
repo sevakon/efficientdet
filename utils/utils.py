@@ -19,9 +19,9 @@ def count_parameters(model):
 
 def download_model_weights(model_name, filename):
     model_to_url = {
-        'efficientdet-d0': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d0.pth',
-        'efficientdet-d1': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d1.pth',
-        'efficientdet-d2': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d2.pth',
+        'efficientdet-d0': 'https://github.com/sevakon/efficientdet/releases/download/2.0/efficientdet-d0.pth',
+        'efficientdet-d1': 'https://github.com/sevakon/efficientdet/releases/download/2.0/efficientdet-d1.pth',
+        'efficientdet-d2': 'https://github.com/sevakon/efficientdet/releases/download/2.0/efficientdet-d2.pth',
         'efficientdet-d3': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d3.pth',
         'efficientdet-d4': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d4.pth',
         'efficientdet-d5': 'https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d5.pth'
