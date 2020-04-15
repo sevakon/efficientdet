@@ -10,11 +10,11 @@ https://arxiv.org/abs/1911.09070
 As of the time I started working on this project, there was no PyTorch implementation on GitHub that would match the original paper in the number of the model's parameters.
 
 ### Model Zoo
-| Model Name | Weights | #params | #params paper | mAP | mAP paper |
+| Model Name | Weights | #params | #params paper | val mAP | val mAP paper |
 | :----------: | :--------: | :-----------: | :--------: | :-----: | :-----: |
-| D0 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d0.pth) | 3.878M | 3.9M | soon | 33.5 | 
-| D1 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d1.pth) | 6.622M | 6.6M | soon | 39.1 |
-| D2 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d2.pth) | 8.091M | 8.1M | soon | 42.5 |
+| D0 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d0.pth) | 3.878M | 3.9M | 32.5 | 33.5 | 
+| D1 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d1.pth) | 6.622M | 6.6M | 38.5 | 39.1 |
+| D2 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d2.pth) | 8.091M | 8.1M | 43.0 | 42.5 |
 | D3 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d3.pth) | 12.022M | 12.0M | soon | 45.9 |
 | D4 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d4.pth) | 20.708M | 20.7M | soon | 49.0 |
 | D5 | [download](https://github.com/sevakon/efficientdet/releases/download/v1.0/efficientdet-d5.pth) | 33.633M | 33.7M | soon | 50.5 |
