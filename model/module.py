@@ -1,4 +1,5 @@
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -45,7 +46,7 @@ class DepthWiseSeparableConvModule(nn.Module):
 
 
 class MaxPool2dSamePad(nn.MaxPool2d):
-    """ TensorFlow lile 2D Max Pooling with same padding """
+    """ TensorFlow-like 2D Max Pooling with same padding """
 
     PAD_VALUE: float = -float('inf')
 

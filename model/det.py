@@ -1,9 +1,11 @@
-import torch
-import numpy as np
-import torch.nn as nn
 from itertools import chain
 
+import numpy as np
+import torch
+import torch.nn as nn
+
 import config as cfg
+from log.logger import logger
 from model.backbone import EfficientNet
 from model.bifpn import BiFPN
 from model.head import HeadNet
@@ -16,20 +18,20 @@ class EfficientDet(nn.Module):
         super(EfficientDet, self).__init__()
         check_model_name(name)
 
-        self.backbone = EfficientNet(cfg.BACKBONE)
+        self.backbone = EfficientNet(cfg.MODEL.BACKBONE)
 
         self.adjuster = ChannelAdjuster(self.backbone.get_channels_list(),
-                                        cfg.W_BIFPN)
-        self.bifpn = nn.Sequential(*[BiFPN(cfg.W_BIFPN)
-                                     for _ in range(cfg.D_BIFPN)])
+                                        cfg.MODEL.W_BIFPN)
+        self.bifpn = nn.Sequential(*[BiFPN(cfg.MODEL.W_BIFPN)
+                                     for _ in range(cfg.MODEL.D_BIFPN)])
 
-        self.regresser = HeadNet(n_features=cfg.W_BIFPN,
+        self.regresser = HeadNet(n_features=cfg.MODEL.W_BIFPN,
                                  out_channels=cfg.NUM_ANCHORS * 4,
-                                 n_repeats=cfg.D_CLASS)
+                                 n_repeats=cfg.MODEL.D_CLASS)
 
-        self.classifier = HeadNet(n_features=cfg.W_BIFPN,
+        self.classifier = HeadNet(n_features=cfg.MODEL.W_BIFPN,
                                   out_channels=cfg.NUM_ANCHORS * cfg.NUM_CLASSES,
-                                  n_repeats=cfg.D_CLASS)
+                                  n_repeats=cfg.MODEL.D_CLASS)
 
     def forward(self, x):
         features = self.backbone(x)
@@ -43,20 +45,32 @@ class EfficientDet(nn.Module):
         return cls_outputs, box_outputs
 
     @staticmethod
-    def from_name(name=cfg.MODEL_NAME):
+    def from_name(name):
+        """ Interface for model prepared to train on COCO """
+        cfg.MODEL.choose_model(name)
+
         model_to_return = EfficientDet(name)
-        # model_to_return._load_backbone()
+
+        if not cfg.MODEL.BACKBONE_WEIGHTS.exists():
+            logger('Downloading backbone {}...'.format(cfg.MODEL.BACKBONE))
+            download_model_weights(cfg.MODEL.BACKBONE, cfg.MODEL.BACKBONE_WEIGHTS)
+
+        model_to_return._load_backbone(cfg.MODEL.BACKBONE_WEIGHTS)
+        model_to_return._initialize_weights()
         return model_to_return
 
     @staticmethod
-    def from_pretrained(name=cfg.MODEL_NAME):
+    def from_pretrained(name):
+        """ Interface for pre-trained model """
+        cfg.MODEL.choose_model(name)
+
         model_to_return = EfficientDet(name)
 
-        if not cfg.MODEL_WEIGHTS.exists():
-            download_model_weights(name, cfg.MODEL_WEIGHTS)
+        if not cfg.MODEL.WEIGHTS.exists():
+            logger('Downloading pre-trained {}...'.format(cfg.MODEL.NAME))
+            download_model_weights(name, cfg.MODEL.WEIGHTS)
 
-        model_to_return._load_weights(cfg.MODEL_WEIGHTS)
-        print('Loaded checkpoint {}'.format(cfg.MODEL_WEIGHTS))
+        model_to_return._load_weights(cfg.MODEL.WEIGHTS)
         return model_to_return
 
     def _initialize_weights(self):
@@ -75,10 +89,12 @@ class EfficientDet(nn.Module):
         nn.init.constant_(self.classifier.head.conv_pw.bias, -np.log((1 - 0.01) / 0.01))
 
     def _load_backbone(self, path):
-        self.backbone.model.load_state_dict(torch.load(path), strict=True)
+        self.backbone.model.load_state_dict(torch.load(path), strict=False)
+        logger('Loaded backbone checkpoint {}'.format(path))
 
     def _load_weights(self, path):
         self.load_state_dict(torch.load(path))
+        logger('Loaded checkpoint {}'.format(path))
 
 
 if __name__ == '__main__':

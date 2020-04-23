@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from model.efficientnet.utils import MemoryEfficientSwish as Swish
 from model.module import DepthWiseSeparableConvModule as DWSConv
 from model.module import MaxPool2dSamePad
-from model.efficientnet.utils import MemoryEfficientSwish as Swish
 
 
 class BiFPN(nn.Module):

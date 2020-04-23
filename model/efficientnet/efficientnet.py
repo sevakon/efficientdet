@@ -228,8 +228,6 @@ class EfficientNet(nn.Module):
                         in_channels=3):
         model = cls.from_name(model_name,
                               override_params={'num_classes': num_classes})
-        load_pretrained_weights(model, model_name,
-                                load_fc=(num_classes == 1000), advprop=advprop)
         if in_channels != 3:
             Conv2d = get_same_padding_conv2d(
                 image_size=model._global_params.image_size)

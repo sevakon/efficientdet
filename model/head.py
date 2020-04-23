@@ -1,11 +1,11 @@
-import torch
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 import config as cfg
-from model.module import DepthWiseSeparableConvModule as DWSConv
 from model.efficientnet.utils import MemoryEfficientSwish as Swish
+from model.module import DepthWiseSeparableConvModule as DWSConv
 
 
 class HeadNet(nn.Module):
