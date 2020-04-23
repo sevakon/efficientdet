@@ -11,13 +11,13 @@ As of the time I started working on this project, there was no PyTorch implement
  would match the original paper in the number of the model's parameters. 
 All of the existed repositories altered a lot from the recently published TensorFlow 
 implementation by [Brain Team](https://github.com/google/automl/tree/master/efficientdet) (e.g. changing strides in the backbone,
-missing batch normalization layers, no 'same' padding strategy in pooling layers, and others). 
+missing batch normalization layers, no 'same' padding strategy in pooling layers, differing training hyper-parameters, not using Exponential Moving Average Decay, and others). 
 Here is my attempt to reproduce EfficientDet in PyTorch.
 
 ### Notes on Implementation
 Alternatively to the TensorFlow implementation, I got rid of the useless biases
 in convolutional layers followed by batch normalization, which resulted in 
-**parameters reduction**
+**parameters reduction**.
 
 ### Model Zoo
 | Model Name | Weights | #params | #params paper | val mAP | val mAP paper |
@@ -29,6 +29,44 @@ in convolutional layers followed by batch normalization, which resulted in
 | D4 | soon | 20.708M | 20.7M | soon | 49.0 |
 | D5 | soon | 33.633M | 33.7M | soon | 50.5 |
 
+### Usage
+
+#### Train from scratch
+
+##### Download COCO2017 Train & Val Sets
+```bash
+wget http://images.cocodataset.org/zips/train2017.zip
+unzip train2017.zip && mv train2017 data/coco/train2017 && rm train2017.zip
+
+wget http://images.cocodataset.org/zips/val2017.zip
+unzip val2017.zip && mv val2017 data/coco/val2017 && rm val2017.zip
+
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations_trainval2017.zip
+```
+
+##### Run Script
+
+```bash
+python main.py -mode 'trainval' -model_name 'efficientdet-d{}'
+```
+
+#### COCO Evaluation
+
+##### Download COCO2017 Val Set
+```bash
+wget http://images.cocodataset.org/zips/val2017.zip
+unzip val2017.zip && mv val2017 data/coco/val2017 && rm val2017.zip
+
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations_trainval2017.zip
+```
+
+##### Run Script
+
+```bash
+python main.py -mode 'eval' -model_name 'efficientdet-d{}'
+```
 
 
 ### RoadMap
@@ -38,15 +76,6 @@ in convolutional layers followed by batch normalization, which resulted in
 - [ ] COCO train script
 - [ ] Reproduce results from the paper
 - [ ] Pre-trained weights release
-
-### Download COCO2017 Validation Set
-```bash
-wget http://images.cocodataset.org/zips/val2017.zip
-unzip val2017.zip && mv val2017 data/coco/val2017 && rm val2017.zip
-
-wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
-unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations_trainval2017.zip
-```
 
 ### References
 - EfficientDet: Scalable and Efficient Object Detection [arXiv:1911.09070](https://arxiv.org/abs/1911.09070)
