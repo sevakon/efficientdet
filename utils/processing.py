@@ -1,13 +1,18 @@
 import torch
 import config as cfg
 
+from PIL import Image
+import numpy as np
 
-def post_process(cls_outputs, box_outputs):
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
+
+
+def postprocess(cls_outputs, box_outputs):
     """Selects top-k predictions.
     Post-proc code adapted from Tensorflow version at: https://github.com/google/automl/tree/master/efficientdet
     and optimized for PyTorch.
     Args:
-        config: a parameter dictionary that includes `min_level`, `max_level`,  `batch_size`, and `num_classes`.
         cls_outputs: an OrderDict with keys representing levels and values
             representing logits in [batch_size, height, width, num_anchors].
         box_outputs: an OrderDict with keys representing levels and values
@@ -35,3 +40,47 @@ def post_process(cls_outputs, box_outputs):
         cls_outputs_all_after_topk, 2, classes_all.unsqueeze(2))
 
     return cls_outputs_all_after_topk, box_outputs_all_after_topk, indices_all, classes_all
+
+
+def resize(pil_img, target_image, interpolate=Image.BILINEAR):
+    width, height = pil_img.size
+    if height > width:
+        scale = target_image / height
+        scaled_height = target_image
+        scaled_width = int(width * scale)
+    else:
+        scale = target_image / width
+        scaled_height = int(height * scale)
+        scaled_width = target_image
+
+    new_img = Image.new("RGB", (target_image, target_image))
+    pil_img = pil_img.resize((scaled_width, scaled_height), interpolate)
+    new_img.paste(pil_img)
+
+    scale = 1. / scale
+
+    return new_img, scale
+
+
+def preprocess(img_paths, img_ids=None):
+    images, scales = [], []
+
+    if img_ids is None:
+        img_ids = [0 for _ in range(len(img_paths))]
+
+    for img_path, img_id in zip(img_paths, img_ids):
+        pil_img = Image.open(img_path).convert('RGB')
+        pil_img, scale = resize(pil_img, cfg.MODEL.IMAGE_SIZE)
+
+        np_img = np.array(pil_img, dtype=np.uint8)
+        if np_img.ndim < 3:
+            np_img = np.expand_dims(np_img, axis=-1)
+
+        normalized_np_img = (np_img / 255 - IMAGENET_MEAN) / IMAGENET_STD
+        normalized_np_img = np.rollaxis(normalized_np_img, 2)
+        images.append(torch.from_numpy(normalized_np_img).float())
+        scales.append(scale)
+
+    batch_x = torch.stack(images)
+
+    return batch_x, img_ids, scales
