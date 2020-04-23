@@ -1,8 +1,8 @@
 import torch
-from model import EfficientDet
-import config as cfg
-from utils.utils import count_parameters
 
+import config as cfg
+from model import EfficientDet
+from utils.utils import count_parameters
 
 """ Quick test on parameters number """
 

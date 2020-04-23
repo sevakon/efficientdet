@@ -1,18 +1,47 @@
-import torch
+import math
+
 from pathlib import Path
+from utils.utils import check_model_name, efficientdet_params
 
-
-MODEL_ZOO = ['efficientdet-d' + str(phi) for phi in range(7)]
-MODEL_NAME = 'efficientdet-d1'
-assert MODEL_NAME in MODEL_ZOO, '{} not in model zoo'.format(MODEL_NAME)
 
 BASE_PATH = Path('./')
 DATA_PATH = BASE_PATH / 'data'
-COCO_PATH = DATA_PATH / 'coco'
 WEIGHTS_PATH = BASE_PATH / 'weights'
-MODEL_WEIGHTS = WEIGHTS_PATH / '{}.pth'.format(MODEL_NAME)
+LOG_PATH = BASE_PATH / 'log'
+LOG_FILE = LOG_PATH / 'output'
 
-BATCH_SIZE = 16
+COCO_PATH = DATA_PATH / 'coco'
+TRAIN_SET = COCO_PATH / 'train2017'
+VAL_SET = COCO_PATH / 'val2017'
+COCO_RESULTS = COCO_PATH / 'results.json'
+
+ANNOTATIONS_PATH = COCO_PATH / 'annotations'
+TRAIN_ANNOTATIONS = ANNOTATIONS_PATH / 'instances_train2017.json'
+VAL_ANNOTATIONS = ANNOTATIONS_PATH / 'instances_val2017.json'
+
+SEED = 1234
+
+BATCH_SIZE = 128
+NUM_EPOCHS = 300
+NUM_EXAMPLES_PER_EPOCH = 118000
+STEPS_PER_EPOCH = math.ceil(NUM_EXAMPLES_PER_EPOCH / BATCH_SIZE)
+TOTAL_STEPS = STEPS_PER_EPOCH * NUM_EPOCHS
+VAL_DELAY = 50
+
+OPT = 'SGD'
+MOMENTUM = 0.9
+BASE_LR = 0.16
+WARMUP_LR = 0.016
+WEIGHT_DECAY = 4e-5
+MOVING_AVERAGE_DECAY = 0.9998
+CLIP_GRADIENTS_NORM = 10.0
+
+# classification loss
+ALPHA = 0.25
+GAMMA = 1.5
+# localization loss
+DELTA = 0.1
+BOX_LOSS_WEIGHT = 50.0
 
 ASPECT_RATIOS = [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)]
 NUM_SCALES = 3
@@ -29,88 +58,35 @@ MAX_DETECTION_POINTS = 5000
 MAX_DETECTIONS_PER_IMAGE = 100
 
 
-def efficientdet_params(model_name):
-    """ Map EfficientDet model name to parameter coefficients. """
-    params_dict = {
+class ModelInfo:
 
-        'efficientdet-d0': {
-            'compound_coef': 0,
-            'backbone': 'efficientnet-b0',
-            'R_input': 512,
-            'W_bifpn': 64,
-            'D_bifpn': 3,
-            'D_class': 3,
-            'params': '3.9M'
-        },
+    NAME: str
+    COMPOUND_COEF: int
+    BACKBONE: str
+    IMAGE_SIZE: int
+    W_BIFPN: int
+    D_BIFPN: int
+    D_CLASS: int
+    PARAMS: str
+    WEIGHTS: Path
+    BACKBONE_WEIGHTS: Path
+    SAVE_PATH: Path
 
-        'efficientdet-d1': {
-            'compound_coef': 1,
-            'backbone': 'efficientnet-b1',
-            'R_input': 640,
-            'W_bifpn': 88,
-            'D_bifpn': 4,
-            'D_class': 3,
-            'params': '6.6M'
-        },
+    def choose_model(self, model_name):
+        check_model_name(model_name)
 
-        'efficientdet-d2': {
-            'compound_coef': 2,
-            'backbone': 'efficientnet-b2',
-            'R_input': 768,
-            'W_bifpn': 112,
-            'D_bifpn': 5,
-            'D_class': 3,
-            'params': '8.1M'
-        },
+        self.NAME = model_name
+        self.COMPOUND_COEF = efficientdet_params(self.NAME)['compound_coef']
+        self.BACKBONE = efficientdet_params(self.NAME)['backbone']
+        self.IMAGE_SIZE = efficientdet_params(self.NAME)['R_input']
+        self.W_BIFPN = efficientdet_params(self.NAME)['W_bifpn']
+        self.D_BIFPN = efficientdet_params(self.NAME)['D_bifpn']
+        self.D_CLASS = efficientdet_params(self.NAME)['D_class']
+        self.PARAMS = efficientdet_params(self.NAME)['params']
 
-        'efficientdet-d3': {
-            'compound_coef': 3,
-            'backbone': 'efficientnet-b3',
-            'R_input': 896,
-            'W_bifpn': 160,
-            'D_bifpn': 6,
-            'D_class': 4,
-            'params': '12.0M'
-        },
-
-        'efficientdet-d4': {
-            'compound_coef': 4,
-            'backbone': 'efficientnet-b4',
-            'R_input': 1024,
-            'W_bifpn': 224,
-            'D_bifpn': 7,
-            'D_class': 4,
-            'params': '20.7M'
-        },
-
-        'efficientdet-d5': {
-            'compound_coef': 5,
-            'backbone': 'efficientnet-b5',
-            'R_input': 1280,
-            'W_bifpn': 288,
-            'D_bifpn': 7,
-            'D_class': 4,
-            'params': '33.7M'
-        },
-
-        'efficientdet-d6': {
-            'compound_coef': 6,
-            'backbone': 'efficientnet-b6',
-            'R_input': 1280,
-            'W_bifpn': 384,
-            'D_bifpn': 8,
-            'D_class': 5,
-            'params': '51.9M'
-        }
-
-    }
-    return params_dict[model_name]
+        self.WEIGHTS = WEIGHTS_PATH / '{}.pth'.format(self.NAME)
+        self.SAVE_PATH = WEIGHTS_PATH / 'trained-{}.pth'.format(self.NAME)
+        self.BACKBONE_WEIGHTS = WEIGHTS_PATH / '{}.pth'.format(self.BACKBONE)
 
 
-COMPOUND_COEF = efficientdet_params(MODEL_NAME)['compound_coef']
-BACKBONE = efficientdet_params(MODEL_NAME)['backbone']
-IMAGE_SIZE = efficientdet_params(MODEL_NAME)['R_input']
-W_BIFPN = efficientdet_params(MODEL_NAME)['W_bifpn']
-D_BIFPN = efficientdet_params(MODEL_NAME)['D_bifpn']
-D_CLASS = efficientdet_params(MODEL_NAME)['D_class']
-PARAMS = efficientdet_params(MODEL_NAME)['params']
+MODEL = ModelInfo()
