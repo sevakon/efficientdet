@@ -11,6 +11,7 @@ from model.bifpn import BiFPN
 from model.head import HeadNet
 from model.module import ChannelAdjuster
 from utils.utils import check_model_name, download_model_weights
+from utils.tools import variance_scaling_
 
 
 class EfficientDet(nn.Module):
@@ -76,11 +77,17 @@ class EfficientDet(nn.Module):
     def _initialize_weights(self):
         """ Initialize Model Weights before training from scratch """
         for module in chain(self.adjuster.modules(),
-                            self.bifpn.modules(),
-                            self.regresser.modules(),
-                            self.classifier.modules()):
+                            self.bifpn.modules()):
             if isinstance(module, nn.Conv2d):
                 nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+            if isinstance(module, nn.BatchNorm2d):
+                nn.init.ones_(module.weight)
+                nn.init.zeros_(module.bias)
+
+        for module in chain(self.regresser.modules(),
+                            self.classifier.modules()):
+            if isinstance(module, nn.Conv2d):
+                variance_scaling_(module.weight)
             if isinstance(module, nn.BatchNorm2d):
                 nn.init.ones_(module.weight)
                 nn.init.zeros_(module.bias)

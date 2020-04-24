@@ -11,8 +11,8 @@ class BiFPN(nn.Module):
     """
     BiFPN block.
     Depending on its order, it either accepts
-    seven feature maps (if this block is the first block in FPN)
-    or five feature maps (otherwise)
+    seven feature maps (if this block is the first block in FPN) or
+    otherwise five feature maps from the output of the previous BiFPN block
     """
 
     EPS: float = 1e-04
@@ -21,7 +21,6 @@ class BiFPN(nn.Module):
     def __init__(self, n_channels):
         super(BiFPN, self).__init__()
 
-        # TODO: Add ReLu activation in depth-wise separable convolutional layers
         self.conv_4_td = DWSConv(n_channels, n_channels, relu=False)
         self.conv_5_td = DWSConv(n_channels, n_channels, relu=False)
         self.conv_6_td = DWSConv(n_channels, n_channels, relu=False)
@@ -115,6 +114,5 @@ class BiFPN(nn.Module):
         weights = F.relu(weights)
         num = sum([w * f for w, f in zip(weights, features)])
         det = sum(weights) + self.EPS
-        # TODO: DELETE ACTIVATION HERE
         x = self.act(num / det)
         return x

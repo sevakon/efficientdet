@@ -1,7 +1,9 @@
-import torch
-import torch.nn as nn
+import math
 
 import numpy as np
+import torch
+import torch.nn as nn
+from torch.nn.init import _calculate_fan_in_and_fan_out, _no_grad_normal_
 
 
 class DetectionLoss(nn.Module):
@@ -14,11 +16,20 @@ class DetectionLoss(nn.Module):
         self.box_loss_weight = box_loss_weight
 
     def forward(self, cls_outputs, box_outputs, labels):
-        cls_losses = None
-        box_losses = None
+        cls_losses = []
+        box_losses = []
+
+        # for level in
+
         cls_loss, box_loss = None, None
         total_loss = cls_loss + self.box_loss_weight * box_loss
         return total_loss, cls_loss, box_loss
+
+    def _classification_loss(self, cls_outputs, cls_targets, num_positives):
+        pass
+
+    def _regression_loss(self, box_outputs, box_targets, num_positives):
+        pass
 
 
 class ExponentialMovingAverage:
@@ -70,11 +81,13 @@ class ExponentialMovingAverage:
 
 
 class CosineLRScheduler:
-    """ Custom Learning Rate Scheduler from original paper
+    """ Custom Learning Rate Scheduler from paper
+    Linear warmup for the first epoch
+    Cosine annealing for later epochs
     Args:
-        lr_warmup_init: initial LR before warmup
-        lr_warmup_step: finish warmup step
-        total_steps: total steps
+        lr_warmup_init (float): initial LR before warmup
+        lr_warmup_step (int): finish warmup step
+        total_steps (int): total steps
     """
 
     def __init__(self, lr_warmup_init, base_lr, lr_warmup_step, total_steps):
@@ -99,3 +112,13 @@ class CosineLRScheduler:
                 1 + np.cos(np.pi * step / total_steps))
         chosen_lr = linear_warmup if step < lr_warmup_step else cosine_lr
         return chosen_lr
+
+
+def variance_scaling_(tensor, gain=1.):
+    """
+    VarianceScaling in https://keras.io/zh/initializers/
+    """
+    fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
+    std = math.sqrt(gain / float(fan_in))
+
+    return _no_grad_normal_(tensor, 0., std)
