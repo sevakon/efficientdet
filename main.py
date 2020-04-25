@@ -63,7 +63,7 @@ def main(args):
         model = EfficientDet.from_name(args.model_name).to(device)
         logger("Model's trainable parameters: {}".format(count_parameters(model)))
 
-        loader = get_loader()
+        loader = get_loader(path=cfg.TRAIN_SET, annotations=cfg.TRAIN_ANNOTATIONS)
 
         optimizer, scheduler, criterion, ema_decay = build_tools(model)
         writer = setup_writer(args.experiment, args)
@@ -74,7 +74,8 @@ def main(args):
                 train(model, optimizer, loader, scheduler,
                       criterion, ema_decay, device, writer)
 
-            if epoch > cfg.VAL_DELAY:
+            if epoch > cfg.VAL_DELAY and \
+                    (epoch + 1) % cfg.VAL_INTERVAL == 0:
                 ema_decay.assign(model)
                 model, writer, best_score = \
                     validate(model, device, writer,
