@@ -81,5 +81,6 @@ def get_loader(path, annotations):
         path=path, annotations=annotations,
         transforms=Compose([Resizer(cfg.MODEL.IMAGE_SIZE), ImageToNumpy(),
                             Normalizer(), NumpyToTensor()]))
+    # TODO: Add Random Horizontal Flip and random crops augmentations
     loader = DataLoader(dataset=dataset, batch_size=cfg.BATCH_SIZE)
     return loader
