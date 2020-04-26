@@ -1,5 +1,3 @@
-import numpy as np
-from PIL import Image
 from pycocotools.coco import COCO
 from torch.utils.data import DataLoader, Dataset
 
@@ -79,8 +77,12 @@ class COCODataset(Dataset):
 def get_loader(path, annotations):
     dataset = COCODataset(
         path=path, annotations=annotations,
-        transforms=Compose([Resizer(cfg.MODEL.IMAGE_SIZE), ImageToNumpy(),
-                            Normalizer(), NumpyToTensor()]))
-    # TODO: Add Random Horizontal Flip and random crops augmentations
+        transforms=Compose([
+            RandomScaler(cfg.MODEL.IMAGE_SIZE,
+                         scale_min=cfg.TRAIN_SCALE_MIN,
+                         scale_max=cfg.TRAIM_SCALE_MAX),
+            RandomHorizontalFlip(probability=.5),
+            ImageToNumpy(), Normalizer(), NumpyToTensor()]))
+
     loader = DataLoader(dataset=dataset, batch_size=cfg.BATCH_SIZE)
     return loader
