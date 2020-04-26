@@ -48,7 +48,7 @@ unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations
 ##### Run Script
 
 ```bash
-python main.py -mode 'trainval' -model_name 'efficientdet-d{}'
+python main.py -mode 'trainval' -model 'efficientdet-d{}'
 ```
 
 #### COCO Evaluation
@@ -65,7 +65,7 @@ unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations
 ##### Run Script
 
 ```bash
-python main.py -mode 'eval' -model_name 'efficientdet-d{}'
+python main.py -mode 'eval' -model 'efficientdet-d{}'
 ```
 
 

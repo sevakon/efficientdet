@@ -19,7 +19,7 @@ def parse_args():
 
     parser.add_argument('-mode', choices=['trainval', 'eval'],
                         default='eval', type=str)
-    parser.add_argument('-model_name', default='efficientdet-d0', type=str)
+    parser.add_argument('-model', default='efficientdet-d0', type=str)
     parser.add_argument('--experiment', type=str, default='experiment')
     parser.add_argument('--cuda', dest='cuda', action='store_true')
     parser.add_argument('--cpu', dest='cuda', action='store_false')
