@@ -15,20 +15,10 @@
 """Anchors
 https://github.com/tensorflow/tpu/blob/master/models/official/retinanet/anchors.py
 """
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import collections
 import numpy as np
 import torch
 
-# from effdet.object_detection import argmax_matcher
-# from effdet.object_detection import box_list
-# from effdet.object_detection import faster_rcnn_box_coder
-# from effdet.object_detection import region_similarity_calculator
-# from effdet.object_detection import target_assigner
 
 # The minimum score to consider a logit for identifying detections.
 MIN_CLASS_SCORE = -5.0
