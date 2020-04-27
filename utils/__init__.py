@@ -1,1 +1,1 @@
-from utils.wrapper import DetectionWrapper
+from .wrapper import DetectionWrapper

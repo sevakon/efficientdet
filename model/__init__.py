@@ -1,1 +1,1 @@
-from model.det import EfficientDet
+from .det import EfficientDet
