@@ -1,7 +1,7 @@
 import argparse
 
 import torch
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 import config as cfg
 from dataloader import get_loader

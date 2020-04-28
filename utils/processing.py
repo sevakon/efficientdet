@@ -24,7 +24,7 @@ def postprocess(cls_outputs, box_outputs):
         for level in range(cfg.NUM_LEVELS)], 1)
 
     _, cls_topk_indices_all = torch.topk(cls_outputs_all.reshape(batch_size, -1), dim=1, k=cfg.MAX_DETECTION_POINTS)
-    indices_all = cls_topk_indices_all / cfg.NUM_CLASSES
+    indices_all = cls_topk_indices_all.floor_divide(cfg.NUM_CLASSES)
     classes_all = cls_topk_indices_all % cfg.NUM_CLASSES
 
     box_outputs_all_after_topk = torch.gather(

@@ -67,8 +67,10 @@ def generate_detections(
     # keep only topk scoring predictions
     top_detection_idx = top_detection_idx[:cfg.MAX_DETECTIONS_PER_IMAGE]
     boxes = boxes[top_detection_idx]
-    scores = scores[top_detection_idx, None]
-    classes = classes[top_detection_idx, None]
+    scores = scores[top_detection_idx]
+    classes = classes[top_detection_idx]
+    scores = scores.view(-1, 1)
+    classes = classes.view(-1, 1)
 
     # xyxy to xywh & rescale to original image
     boxes[:, 2] -= boxes[:, 0]
