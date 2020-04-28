@@ -57,8 +57,14 @@ MIN_LEVEL = 3
 MAX_LEVEL = 7
 NUM_LEVELS = MAX_LEVEL - MIN_LEVEL + 1
 
+# The maximum number of (anchor,class) pairs to keep for non-max suppression.
 MAX_DETECTION_POINTS = 5000
+# The maximum number of detections per image.
 MAX_DETECTIONS_PER_IMAGE = 100
+# The score for a dummy detection
+_DUMMY_DETECTION_SCORE = -1e5
+# The minimum score to consider a logit for identifying detections.
+MIN_CLASS_SCORE = -5.0
 
 
 class ModelInfo:

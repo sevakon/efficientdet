@@ -60,7 +60,7 @@ def main(args):
         if args.cuda else torch.device('cpu')
 
     if args.mode == 'trainval':
-        model = EfficientDet.from_name(args.model_name).to(device)
+        model = EfficientDet.from_name(args.model).to(device)
         logger("Model's trainable parameters: {}".format(count_parameters(model)))
 
         loader = get_loader(path=cfg.TRAIN_SET, annotations=cfg.TRAIN_ANNOTATIONS)
@@ -83,7 +83,7 @@ def main(args):
                 ema_decay.resume(model)
 
     elif args.mode == 'eval':
-        model = EfficientDet.from_pretrained(args.model_name).to(device)
+        model = EfficientDet.from_pretrained(args.model).to(device)
         validate(model, device)
 
 

@@ -13,7 +13,7 @@ All of the existed repositories altered a lot from the recently published Tensor
 implementation by [Brain Team](https://github.com/google/automl/tree/master/efficientdet) (e.g. changing strides in the backbone,
 missing batch normalization layers, no 'same' padding strategy in pooling layers, differing training hyper-parameters, not using Exponential Moving Average Decay, and others). 
 Here is my attempt to reproduce EfficientDet in PyTorch.
-My end goal is to reproduce training cycle from the original paper and achieive nearly same results.
+My end goal is to reproduce training cycle from the original paper and achieve nearly same results.
 
 ### Notes on Implementation
 Alternatively to the TensorFlow implementation, I got rid of the useless biases

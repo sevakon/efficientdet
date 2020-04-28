@@ -36,16 +36,18 @@ def validate(model, device, writer=None, save_filename=None, best_score=0.0):
             batch_ids.append(image_id)
 
             if (idx + 1) % cfg.BATCH_SIZE == 0:
-                output = wrapper(batch_paths, batch_ids)
-                for batch_out in output:
-                    for det in batch_out:
-                        image_id = int(det[0])
-                        score = float(det[5])
+                batch_output = wrapper(batch_paths)
+                for idx, out in enumerate(batch_output):
+                    image_id = batch_ids[idx]
+                    for det in out:
+                        bbox = det[0:4].tolist()
+                        score = float(det[4])
+                        category_id = int(det[5])
                         coco_det = {
                             'image_id': image_id,
-                            'bbox': det[1:5].tolist(),
+                            'bbox': bbox,
                             'score': score,
-                            'category_id': int(det[6]),
+                            'category_id': category_id,
                         }
                         processed_img_ids.append(image_id)
                         results.append(coco_det)
