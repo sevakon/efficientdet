@@ -71,7 +71,32 @@ class COCODataset(Dataset):
         if self.transforms is not None:
             image, annotation = self.transforms(image, annotation)
 
-        return image, annotation
+        sample = {'img': image, 'annotation': annotation}
+        return sample
+
+
+def collater(batch):
+    batch_size = len(batch)
+    images = [sample['img'] for sample in batch]
+    annotations = [sample['annotation'] for sample in batch]
+
+    max_num_annotations = max(annotation['bbox'].shape[0] for annotation in annotations)
+
+    if max_num_annotations > 0:
+        annotations_padded = -1 * torch.ones(
+            (batch_size, max_num_annotations, 5))
+
+        for idx, annotation in enumerate(annotations):
+            bbox = torch.Tensor(annotation['bbox'])
+            cls = torch.Tensor(annotation['cls']).view(-1, 1)
+            annotation = torch.cat([bbox, cls], dim=1)
+            if annotation.shape[0] > 0:
+                annotations_padded[idx, :annotation.shape[0], :] = annotation
+    else:
+        annotations_padded = -1 * torch.ones((batch_size, 1, 5))
+
+    images = torch.stack(images)
+    return {'img': images, 'annotation': annotations_padded}
 
 
 def get_loader(path, annotations):
@@ -80,9 +105,10 @@ def get_loader(path, annotations):
         transforms=Compose([
             RandomScaler(cfg.MODEL.IMAGE_SIZE,
                          scale_min=cfg.TRAIN_SCALE_MIN,
-                         scale_max=cfg.TRAIM_SCALE_MAX),
+                         scale_max=cfg.TRAIN_SCALE_MAX),
             RandomHorizontalFlip(probability=.5),
             ImageToNumpy(), Normalizer(), NumpyToTensor()]))
 
-    loader = DataLoader(dataset=dataset, batch_size=cfg.BATCH_SIZE)
+    loader = DataLoader(
+        dataset=dataset, batch_size=cfg.BATCH_SIZE, collate_fn=collater)
     return loader

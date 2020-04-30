@@ -23,7 +23,8 @@ def postprocess(cls_outputs, box_outputs):
         box_outputs[level].permute(0, 2, 3, 1).reshape([batch_size, -1, 4])
         for level in range(cfg.NUM_LEVELS)], 1)
 
-    _, cls_topk_indices_all = torch.topk(cls_outputs_all.reshape(batch_size, -1), dim=1, k=cfg.MAX_DETECTION_POINTS)
+    _, cls_topk_indices_all = torch.topk(cls_outputs_all.reshape(batch_size, -1),
+                                         dim=1, k=cfg.MAX_DETECTION_POINTS)
     indices_all = cls_topk_indices_all.floor_divide(cfg.NUM_CLASSES)
     classes_all = cls_topk_indices_all % cfg.NUM_CLASSES
 
@@ -39,7 +40,10 @@ def postprocess(cls_outputs, box_outputs):
 
 
 def preprocess(img_paths: list):
-    """ Preprocess: image paths to input batch """
+    """ Preprocess: image paths to input batch
+        Args:
+            img_paths (list): list of image paths to be formed into a batch
+    """
     images, scales = [], []
     resizer = Resizer(cfg.MODEL.IMAGE_SIZE)
     to_numpy = ImageToNumpy()
@@ -59,5 +63,4 @@ def preprocess(img_paths: list):
         scales.append(scale)
 
     batch_x = torch.stack(images)
-
     return batch_x, scales

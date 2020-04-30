@@ -18,7 +18,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Main')
 
     parser.add_argument('-mode', choices=['trainval', 'eval'],
-                        default='eval', type=str)
+                        default='trainval', type=str)
     parser.add_argument('-model', default='efficientdet-d0', type=str)
     parser.add_argument('--experiment', type=str, default='experiment')
     parser.add_argument('--cuda', dest='cuda', action='store_true')
@@ -48,7 +48,7 @@ def build_tools(model):
 
 
 def setup_writer(tb_tag, args):
-    writer = SummaryWriter(logdir=cfg.LOG_PATH / tb_tag)
+    writer = SummaryWriter(log_dir=cfg.LOG_PATH / tb_tag)
     writer.add_text("Hyperparams", '<br />'.join(
         [f"{k}: {v}" for k, v in args.__dict__.items()]))
     writer.train_step, writer.eval_step = 0, 0

@@ -10,13 +10,13 @@ from tqdm import tqdm
 
 import config as cfg
 from log.logger import logger
-from utils import DetectionWrapper
+from utils import DetectionEvalWrapper
 
 
 def validate(model, device, writer=None, save_filename=None, best_score=0.0):
     """ COCO VAL2017 """
     model.eval()
-    wrapper = DetectionWrapper(model, device)
+    wrapper = DetectionEvalWrapper(model, device)
 
     coco_gt = COCO(cfg.VAL_ANNOTATIONS)
     image_ids = coco_gt.getImgIds()

@@ -15,7 +15,8 @@ class DetectionLoss(nn.Module):
         self.delta = delta
         self.box_loss_weight = box_loss_weight
 
-    def forward(self, cls_outputs, box_outputs, labels):
+    def forward(self, cls_outputs, box_outputs,
+                cls_targets, box_targets, num_positives):
         cls_losses = []
         box_losses = []
 
@@ -120,5 +121,5 @@ def variance_scaling_(tensor, gain=1.):
     """
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor)
     std = math.sqrt(gain / float(fan_in))
-
-    return _no_grad_normal_(tensor, 0., std)
+    var_scaled = _no_grad_normal_(tensor, 0., std)
+    return var_scaled

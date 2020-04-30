@@ -7,90 +7,129 @@ from torchvision.ops.boxes import batched_nms
 
 def decode_box_outputs(rel_codes, anchors):
     """Transforms relative regression coordinates to absolute positions.
-    Network predictions are normalized and relative to a given anchor; this
-    reverses the transformation and outputs absolute coordinates for the input image.
     Args:
-        rel_codes: box regression targets.
-        anchors: anchors on all feature levels.
+        rel_codes: batched box regression targets.
+        anchors: batched anchors on all feature levels.
     Returns:
-        outputs: bounding boxes.
+        outputs: batched bounding boxes.
     """
-    ycenter_a = (anchors[0] + anchors[2]) / 2
-    xcenter_a = (anchors[1] + anchors[3]) / 2
-    ha = anchors[2] - anchors[0]
-    wa = anchors[3] - anchors[1]
-    ty, tx, th, tw = rel_codes
+    y_center_a = (anchors[:, :, 0] + anchors[:, :, 2]) / 2
+    x_center_a = (anchors[:, :, 1] + anchors[:, :, 3]) / 2
+    ha = anchors[:, :, 2] - anchors[:, :, 0]
+    wa = anchors[:, :, 3] - anchors[:, :, 1]
+    ty, tx = rel_codes[:, :, 0], rel_codes[:, :, 1]
+    th, tw = rel_codes[:, :, 2], rel_codes[:, :, 3]
 
     w = torch.exp(tw) * wa
     h = torch.exp(th) * ha
-    ycenter = ty * ha + ycenter_a
-    xcenter = tx * wa + xcenter_a
-    ymin = ycenter - h / 2.
-    xmin = xcenter - w / 2.
-    ymax = ycenter + h / 2.
-    xmax = xcenter + w / 2.
-    return torch.stack([ymin, xmin, ymax, xmax], dim=1)
+    y_center = ty * ha + y_center_a
+    x_center = tx * wa + x_center_a
+    y_min = y_center - h / 2.
+    x_min = x_center - w / 2.
+    y_max = y_center + h / 2.
+    x_max = x_center + w / 2.
+    return torch.stack([y_min, x_min, y_max, x_max], dim=-1)
 
 
 def generate_detections(
-        cls_outputs, box_outputs, anchor_boxes, indices, classes, image_scale):
-    """Generates detections with RetinaNet model outputs and anchors.
-    Args:
-        cls_outputs: a numpy array with shape [N, 1], which has the highest class
-            scores on all feature levels. The N is the number of selected
-            top-K total anchors on all levels.  (k being MAX_DETECTION_POINTS)
-        box_outputs: a numpy array with shape [N, 4], which stacks box regression
-            outputs on all feature levels. The N is the number of selected top-k
-            total anchors on all levels. (k being MAX_DETECTION_POINTS)
-        anchor_boxes: a numpy array with shape [N, 4], which stacks anchors on all
-            feature levels. The N is the number of selected top-k total anchors on all levels.
-        indices: a numpy array with shape [N], which is the indices from top-k selection.
-        classes: a numpy array with shape [N], which represents the class
-            prediction on all selected anchors from top-k selection.
-        image_id: an integer number to specify the image id.
-        image_scale: a float tensor representing the scale between original image
-            and input image for the detector. It is used to rescale detections for
-            evaluating with the original groundtruth annotations.
-        num_classes: a integer that indicates the number of classes.
+        cls_outputs, box_outputs, anchor_boxes, indices, classes, image_scales):
+    """Generates batched detections with RetinaNet model outputs and anchors.
+    Args: (B - batch size, N - top-k selection length)
+        cls_outputs: a numpy array with shape [B, N, 1], which has the
+            highest class scores on all feature levels.
+        box_outputs: a numpy array with shape [B, N, 4], which stacks
+            box regression outputs on all feature levels.
+        anchor_boxes: a numpy array with shape [B, N, 4], which stacks
+            anchors on all feature levels.
+        indices: a numpy array with shape [B, N], which is the indices from top-k selection.
+        classes: a numpy array with shape [B, N], which represents
+            the class prediction on all selected anchors from top-k selection.
+        image_scales: a list representing the scale between original images
+            and input images for the detector.
     Returns:
-        detections: detection results in a tensor with each row representing
-            [image_id, x, y, width, height, score, class]
+        detections: detection results in a tensor of shape [B, N, 6],
+            where [:, :, 0:4] are boxes, [:, :, 5] are scores,
     """
+    batch_size = indices.shape[0]
+    device = indices.device
     anchor_boxes = anchor_boxes[indices, :]
-    scores = cls_outputs.sigmoid().squeeze(1).float()
+    scores = cls_outputs.sigmoid().squeeze(2).float()
 
     # apply bounding box regression to anchors
-    boxes = decode_box_outputs(box_outputs.T.float(), anchor_boxes.T)
-    boxes = boxes[:, [1, 0, 3, 2]]
+    boxes = decode_box_outputs(box_outputs.float(), anchor_boxes)
+    boxes = boxes[:, :, [1, 0, 3, 2]]
 
-    top_detection_idx = batched_nms(boxes, scores, classes, iou_threshold=0.5)
-    # keep only topk scoring predictions
-    top_detection_idx = top_detection_idx[:cfg.MAX_DETECTIONS_PER_IMAGE]
-    boxes = boxes[top_detection_idx]
-    scores = scores[top_detection_idx]
-    classes = classes[top_detection_idx]
-    scores = scores.view(-1, 1)
-    classes = classes.view(-1, 1)
+    batched_boxes, batched_scores, batched_classes = [], [], []
+    for batch_idx in range(batch_size):
+        # iterate over batch since we need non-max suppression for each image
+        batch_boxes = boxes[batch_idx, :, :]
+        batch_scores = scores[batch_idx, :]
+        batch_classes = classes[batch_idx, :]
+        top_detection_idx = batched_nms(
+            batch_boxes, batch_scores, batch_classes, iou_threshold=0.5)
+        # keep only topk scoring predictions
+        top_detection_idx = top_detection_idx[:cfg.MAX_DETECTIONS_PER_IMAGE]
+        batch_boxes = batch_boxes[top_detection_idx]
+        batch_scores = batch_scores[top_detection_idx]
+        batch_classes = batch_classes[top_detection_idx]
+        # fill zero predictions to match MAX_DETECTIONS_PER_IMAGE
+        detections_diff = len(top_detection_idx) - cfg.MAX_DETECTIONS_PER_IMAGE
+        if detections_diff < 0:
+            add_boxes = torch.zeros(
+                (-detections_diff, 4), device=device, dtype=batch_boxes.dtype)
+            batch_boxes = torch.cat([batch_boxes, add_boxes], dim=0)
+            add_scores = torch.zeros(
+                (-detections_diff, 1), device=device, dtype=batch_scores.dtype)
+            batch_scores = torch.cat([batch_scores, add_scores], dim=0)
+            add_classes = torch.zeros(
+                (-detections_diff, 1), device=device, dtype=batch_classes.dtype)
+            batch_classes = torch.cat([batch_classes, add_classes], dim=0)
+
+        batch_scores = batch_scores.view(-1, 1)
+        batch_classes = batch_classes.view(-1, 1)
+        # stack them together
+        batched_boxes.append(batch_boxes)
+        batched_scores.append(batch_scores)
+        batched_classes.append(batch_classes)
+
+    boxes = torch.stack(batched_boxes)
+    scores = torch.stack(batched_scores)
+    classes = torch.stack(batched_classes)
 
     # xyxy to xywh & rescale to original image
-    boxes[:, 2] -= boxes[:, 0]
-    boxes[:, 3] -= boxes[:, 1]
-    boxes *= image_scale
+    boxes[:, :, 2] -= boxes[:, :, 0]
+    boxes[:, :, 3] -= boxes[:, :, 1]
+    boxes_scaler = torch.FloatTensor(image_scales).to(boxes.device)
+    boxes = boxes * boxes_scaler[:, None, None]
 
     classes += 1  # back to class idx with background class = 0
+    detections = torch.cat([boxes, scores, classes.float()], dim=2)
 
-    # stack em and pad out to MAX_DETECTIONS_PER_IMAGE if necessary
-    detections = torch.cat([boxes, scores, classes.float()], dim=1)
-    if len(top_detection_idx) < cfg.MAX_DETECTIONS_PER_IMAGE:
-        detections = torch.cat([
-            detections,
-            torch.zeros(
-                (cfg.MAX_DETECTIONS_PER_IMAGE - len(top_detection_idx), 6), device=detections.device, dtype=detections.dtype)
-        ], dim=0)
     return detections
 
 
-class Anchors(object):
+def calc_iou(a, b):
+    area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
+
+    ih = torch.min(torch.unsqueeze(a[:, 2], dim=1), b[:, 2]) \
+            - torch.max(torch.unsqueeze(a[:, 0], 1), b[:, 0])
+    iw = torch.min(torch.unsqueeze(a[:, 3], dim=1), b[:, 3]) \
+            - torch.max(torch.unsqueeze(a[:, 1], 1), b[:, 1])
+
+    ih = torch.clamp(ih, min=0)
+    iw = torch.clamp(iw, min=0)
+
+    ua = torch.unsqueeze((a[:, 2] - a[:, 0])
+                         * (a[:, 3] - a[:, 1]), dim=1) + area - iw * ih
+    ua = torch.clamp(ua, min=1e-8)
+
+    intersection = iw * ih
+    iou = intersection / ua
+
+    return iou
+
+
+class Anchors:
     """RetinaNet Anchors class."""
 
     def __init__(self, min_level, max_level, num_scales,
@@ -166,3 +205,27 @@ class Anchors(object):
 
     def get_anchors_per_location(self):
         return self.num_scales * len(self.aspect_ratios)
+
+
+class AnchorsLabeler:
+    """ Labeler for multiscale anchor boxes. """
+
+    def __init__(self, anchors, num_classes, threshold=0.5):
+        """Constructs anchor labeler to assign labels to anchors.
+        Args:
+            anchors: an instance of class Anchors.
+            num_classes: integer number representing number of classes in the dataset.
+            threshold: float number between 0 and 1 representing the threshold
+                to assign positive labels for anchors.
+        """
+        self.anchors = anchors
+        self.num_classes = num_classes
+        self.threshold = threshold
+
+    def label_anchors(self, gt_labels, gt_boxes):
+        indices = gt_labels != -1
+        gt_labels = gt_labels[indices]
+        gt_boxes = gt_boxes[indices]
+        iou = calc_iou(self.anchors.boxes, gt_boxes)
+        iou_max, iou_argmax = torch.max(iou, dim=1)
+        return gt_class, gt_box, num_positive

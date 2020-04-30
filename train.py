@@ -3,6 +3,7 @@ from torch.nn.utils import clip_grad_norm_
 from tqdm import tqdm
 
 import config as cfg
+from utils import DetectionTrainWrapper
 from utils.utils import get_gradnorm, get_lr, is_valid_number
 
 
@@ -11,18 +12,18 @@ def train(model, optimizer, loader, scheduler, criterion, ema, device, writer):
 
     pbar = tqdm(enumerate(loader), total=len(loader), leave=False)
     for step, batch in pbar:
+        x, labels = batch['img'], batch['annotation']
+        gt_labels, gt_boxes = labels[:, :, 4], labels[:, :, :4]
+        batch_size = x.shape[0]
 
-        batch_size = batch.shape[0]
-        x, labels = batch
-        cls_output, box_output = model(x)
+        wrapper = DetectionTrainWrapper(model, device, criterion)
+        loss, cls_loss, box_loss = wrapper(x, gt_labels, gt_boxes)
 
-        loss, cls_loss, box_loss = criterion(cls_output, box_output, labels)
         values = [v.data.item() for v in [loss, cls_loss, box_loss]]
 
         pbar.set_description(
             "all:{.2f} | cls:{.2f} | box:{.2f}".format(
-                values[0], values[1], values[2])
-        )
+                values[0], values[1], values[2]))
 
         if is_valid_number(loss.data.item()):
             loss.backward()
