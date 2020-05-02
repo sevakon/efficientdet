@@ -99,7 +99,7 @@ def collater(batch):
     return {'img': images, 'annotation': annotations_padded}
 
 
-def get_loader(path, annotations):
+def get_loader(path, annotations, batch_size):
     dataset = COCODataset(
         path=path, annotations=annotations,
         transforms=Compose([
@@ -110,5 +110,5 @@ def get_loader(path, annotations):
             ImageToNumpy(), Normalizer(), NumpyToTensor()]))
 
     loader = DataLoader(
-        dataset=dataset, batch_size=cfg.BATCH_SIZE, collate_fn=collater)
+        dataset=dataset, batch_size=batch_size, collate_fn=collater)
     return loader

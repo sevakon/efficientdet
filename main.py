@@ -63,7 +63,9 @@ def main(args):
         model = EfficientDet.from_name(args.model).to(device)
         logger("Model's trainable parameters: {}".format(count_parameters(model)))
 
-        loader = get_loader(path=cfg.TRAIN_SET, annotations=cfg.TRAIN_ANNOTATIONS)
+        loader = get_loader(path=cfg.TRAIN_SET,
+                            annotations=cfg.TRAIN_ANNOTATIONS,
+                            batch_size=cfg.BATCH_SIZE)
 
         optimizer, scheduler, criterion, ema_decay = build_tools(model)
         writer = setup_writer(args.experiment, args)

@@ -2,7 +2,9 @@ import config as cfg
 from model import EfficientDet
 from utils.utils import count_parameters
 
-""" Quick test on parameters number """
+""" Quick test on parameters number 
+This script is intended to be run in the root directory, 
+make sure to mode the file """
 
 model = EfficientDet.from_pretrained('efficientdet-d0').to('cpu')
 
