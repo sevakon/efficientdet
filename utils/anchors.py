@@ -109,7 +109,12 @@ def generate_detections(
 
 
 def calc_iou(a, b):
-    area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
+    """ Calculate Intersection-over-Union of two samples
+    Args:
+        a (torch.Tensor): set of boxes with shape [N, 4] in yxyx format
+        b (torch.Tensot): set of boxes with shape [M, 4] in yxyx format
+    """
+    area = (b[:, 3] - b[:, 1]) * (b[:, 2] - b[:, 0])
 
     ih = torch.min(torch.unsqueeze(a[:, 2], dim=1), b[:, 2]) \
             - torch.max(torch.unsqueeze(a[:, 0], 1), b[:, 0])
@@ -119,8 +124,8 @@ def calc_iou(a, b):
     ih = torch.clamp(ih, min=0)
     iw = torch.clamp(iw, min=0)
 
-    ua = torch.unsqueeze((a[:, 2] - a[:, 0])
-                         * (a[:, 3] - a[:, 1]), dim=1) + area - iw * ih
+    ua = torch.unsqueeze((a[:, 3] - a[:, 1])
+                         * (a[:, 2] - a[:, 0]), dim=1) + area - iw * ih
     ua = torch.clamp(ua, min=1e-8)
 
     intersection = iw * ih
@@ -228,4 +233,10 @@ class AnchorsLabeler:
         gt_boxes = gt_boxes[indices]
         iou = calc_iou(self.anchors.boxes, gt_boxes)
         iou_max, iou_argmax = torch.max(iou, dim=1)
-        return gt_class, gt_box, num_positive
+        # everything is correct up to this point
+        positive_indices = torch.ge(iou_max, self.threshold)
+        num_positive_anchors = positive_indices.sum()
+        assigned_annotations = gt_labels[iou_argmax, :]
+
+
+        return cls_target, box_target, num_positive_anchors

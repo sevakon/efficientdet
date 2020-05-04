@@ -28,10 +28,10 @@ class DetectionTrainWrapper(nn.Module):
         cls_targets, box_targets, num_positives = [], [], []
         # Iterating over batch since labels length is different for each image
         for i in range(batch_size):
-            gt_class, gt_box, num_positive = \
+            cls_target, box_target, num_positive = \
                 self.anchor_labeler.label_anchors(gt_labels[i], gt_boxes[i])
-            cls_targets.append(gt_class)
-            box_targets.append(gt_box)
+            cls_targets.append(cls_target)
+            box_targets.append(box_target)
             num_positives.append(num_positive)
 
         total_loss, cls_loss, box_loss = self.criterion(

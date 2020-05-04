@@ -3,34 +3,88 @@ import math
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn.init import _calculate_fan_in_and_fan_out, _no_grad_normal_
 
 
 class DetectionLoss(nn.Module):
     """ Overall Detection Loss """
 
-    def __init__(self, alpha, gamma, delta, box_loss_weight):
+    def __init__(self, alpha, gamma, delta, box_loss_weight, levels=5):
         self.alpha = alpha
         self.gamma = gamma
         self.delta = delta
         self.box_loss_weight = box_loss_weight
+        self.levels = levels
 
     def forward(self, cls_outputs, box_outputs,
                 cls_targets, box_targets, num_positives):
-        cls_losses = []
-        box_losses = []
+        cls_losses, box_losses = [], []
 
-        # for level in
+        for level in range(self.levels):
+            cls_loss = self._classification_loss(
+                cls_outputs[level], cls_targets[level], num_positives)
+            box_loss = self._regression_loss(
+                box_outputs[level], box_targets[level], num_positives)
+            cls_losses.append(cls_loss)
+            box_losses.append(box_loss)
 
-        cls_loss, box_loss = None, None
+        cls_loss = torch.sum(torch.stack(cls_losses, dim=-1), dim=-1)
+        box_loss = torch.sum(torch.stack(box_losses, dim=-1), dim=-1)
         total_loss = cls_loss + self.box_loss_weight * box_loss
         return total_loss, cls_loss, box_loss
 
     def _classification_loss(self, cls_outputs, cls_targets, num_positives):
-        pass
+        normalizer = num_positives
+        classification_loss = focal_loss(cls_outputs, cls_targets,
+                                         self.alpha, self.gamma, normalizer)
+        return classification_loss
 
     def _regression_loss(self, box_outputs, box_targets, num_positives):
-        pass
+        normalizer = num_positives * 4.0
+        mask = box_targets != 0.0
+        box_loss = huber_loss(box_targets, box_outputs, weights=mask,
+                              delta=self.delta, size_average=False)
+        box_loss /= normalizer
+        return box_loss
+
+
+def huber_loss(input, target, delta=1., weights=None, size_average=True):
+    err = input - target
+    abs_err = err.abs()
+    quadratic = torch.clamp(abs_err, max=delta)
+    linear = abs_err - quadratic
+    loss = 0.5 * quadratic.pow(2) + delta * linear
+    if weights is not None:
+        loss *= weights
+    return loss.mean() if size_average else loss.sum()
+
+
+def focal_loss(logits, targets, alpha, gamma, normalizer):
+    """Compute the focal loss between `logits` and the golden `target` values.
+    Focal loss = -(1-pt)^gamma * log(pt)
+    where pt is the probability of being classified to the true class.
+    Args:
+      logits: A float32 tensor of size
+        [batch, height_in, width_in, num_predictions].
+      targets: A float32 tensor of size
+        [batch, height_in, width_in, num_predictions].
+      alpha: A float32 scalar multiplying alpha to the loss from positive examples
+        and (1-alpha) to the loss from negative examples.
+      gamma: A float32 scalar modulating loss from hard and easy examples.
+      normalizer: A float32 scalar normalizes the total loss from all examples.
+    Returns:
+      loss: A float32 scalar representing normalized total loss.
+    """
+
+    positive_label_mask = targets == 1.0
+    cross_entropy = F.binary_cross_entropy_with_logits(logits, targets.to(logits.dtype), reduction='none')
+    neg_logits = -1.0 * logits
+    modulator = torch.exp(gamma * targets * neg_logits - gamma * torch.log1p(torch.exp(neg_logits)))
+    loss = modulator * cross_entropy
+    weighted_loss = torch.where(positive_label_mask, alpha * loss, (1.0 - alpha) * loss)
+    weighted_loss /= normalizer
+    return weighted_loss
 
 
 class ExponentialMovingAverage:
