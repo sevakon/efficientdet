@@ -8,8 +8,7 @@ from dataloader import get_loader
 from log.logger import logger
 from model import EfficientDet
 from train import train
-from utils.tools import (CosineLRScheduler, DetectionLoss,
-                         ExponentialMovingAverage)
+from utils import (CosineLRScheduler, DetectionLoss, ExponentialMovingAverage)
 from utils.utils import count_parameters, init_seed
 from validation import validate
 
@@ -42,8 +41,11 @@ def build_tools(model):
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lr_lambda=lambda step: schedule_helper.get_lr_coeff(step))
 
-    criterion = DetectionLoss(cfg.ALPHA, cfg.GAMMA, cfg.DELTA, cfg.BOX_LOSS_WEIGHT)
+    criterion = DetectionLoss(
+        cfg.ALPHA, cfg.GAMMA, cfg.DELTA, cfg.BOX_LOSS_WEIGHT, cfg.NUM_CLASSES)
+
     ema_decay = ExponentialMovingAverage(model, cfg.MOVING_AVERAGE_DECAY)
+
     return optimizer, scheduler, criterion, ema_decay
 
 
@@ -61,6 +63,7 @@ def main(args):
 
     if args.mode == 'trainval':
         model = EfficientDet.from_name(args.model).to(device)
+        # model = EfficientDet.from_pretrained(args.model).to(device)
         logger("Model's trainable parameters: {}".format(count_parameters(model)))
 
         loader = get_loader(path=cfg.TRAIN_SET,

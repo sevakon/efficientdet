@@ -1,8 +1,34 @@
-import config as cfg
 import numpy as np
 import torch
 
 from torchvision.ops.boxes import batched_nms
+
+
+def encode_boxes_to_anchors(boxes, anchors, eps=1e-8):
+    """ Create anchors regression target based on anchors
+    Args:
+        boxes: ground truth boxes.
+        anchors: anchor boxes on all feature levels.
+        eps: small number for stability
+    Returns:
+        outputs: anchors w.r.t. ground truth
+    """
+
+    def corner_to_center(rects):
+        h, w = rects[:, 2] - rects[:, 0], rects[:, 3] - rects[:, 1]
+        y_ctr, x_ctr = rects[:, 0] + 0.5 * h, rects[:, 1] + 0.5 * w
+        return y_ctr, x_ctr, h, w
+
+    ycenter_a, xcenter_a, ha, wa = corner_to_center(anchors)
+    ycenter, xcenter, h, w = corner_to_center(boxes)
+    ha, wa, h, w = ha + eps, wa + eps, h + eps, w + eps
+    dy = (ycenter - ycenter_a) / ha
+    dx = (xcenter - xcenter_a) / wa
+    dh = torch.log(h / ha)
+    dw = torch.log(w / wa)
+    outputs = torch.stack([dy, dx, dh, dw]).T
+
+    return outputs
 
 
 def decode_box_outputs(rel_codes, anchors):
@@ -28,11 +54,21 @@ def decode_box_outputs(rel_codes, anchors):
     x_min = x_center - w / 2.
     y_max = y_center + h / 2.
     x_max = x_center + w / 2.
-    return torch.stack([y_min, x_min, y_max, x_max], dim=-1)
+    outputs = torch.stack([y_min, x_min, y_max, x_max], dim=-1)
+
+    return outputs
+
+
+def clip_boxes_(boxes, size):
+    boxes = boxes.clamp(min=0)
+    size = torch.cat([size, size], dim=0)
+    boxes = boxes.min(size)
+    return boxes
 
 
 def generate_detections(
-        cls_outputs, box_outputs, anchor_boxes, indices, classes, image_scales):
+        cls_outputs, box_outputs, anchor_boxes, indices, classes,
+        image_sizes, image_scales, max_detections_per_image):
     """Generates batched detections with RetinaNet model outputs and anchors.
     Args: (B - batch size, N - top-k selection length)
         cls_outputs: a numpy array with shape [B, N, 1], which has the
@@ -44,6 +80,7 @@ def generate_detections(
         indices: a numpy array with shape [B, N], which is the indices from top-k selection.
         classes: a numpy array with shape [B, N], which represents
             the class prediction on all selected anchors from top-k selection.
+        image_sizes: a list of tuples representing size of incoming images
         image_scales: a list representing the scale between original images
             and input images for the detector.
     Returns:
@@ -60,20 +97,26 @@ def generate_detections(
     boxes = boxes[:, :, [1, 0, 3, 2]]
 
     batched_boxes, batched_scores, batched_classes = [], [], []
+    # iterate over batch since we need non-max suppression for each image
     for batch_idx in range(batch_size):
-        # iterate over batch since we need non-max suppression for each image
         batch_boxes = boxes[batch_idx, :, :]
         batch_scores = scores[batch_idx, :]
         batch_classes = classes[batch_idx, :]
+        # clip boxes outputs
+        boxes_max_size = [image_sizes[batch_idx][0] / image_scales[batch_idx],
+                          image_sizes[batch_idx][1] / image_scales[batch_idx]]
+        boxes_max_size = torch.FloatTensor(boxes_max_size).to(batch_boxes.device)
+        batch_boxes = clip_boxes_(batch_boxes, boxes_max_size)
+        # perform non-maximum suppression
         top_detection_idx = batched_nms(
             batch_boxes, batch_scores, batch_classes, iou_threshold=0.5)
         # keep only topk scoring predictions
-        top_detection_idx = top_detection_idx[:cfg.MAX_DETECTIONS_PER_IMAGE]
+        top_detection_idx = top_detection_idx[:max_detections_per_image]
         batch_boxes = batch_boxes[top_detection_idx]
         batch_scores = batch_scores[top_detection_idx]
         batch_classes = batch_classes[top_detection_idx]
         # fill zero predictions to match MAX_DETECTIONS_PER_IMAGE
-        detections_diff = len(top_detection_idx) - cfg.MAX_DETECTIONS_PER_IMAGE
+        detections_diff = len(top_detection_idx) - max_detections_per_image
         if detections_diff < 0:
             add_boxes = torch.zeros(
                 (-detections_diff, 4), device=device, dtype=batch_boxes.dtype)
@@ -227,16 +270,47 @@ class AnchorsLabeler:
         self.num_classes = num_classes
         self.threshold = threshold
 
-    def label_anchors(self, gt_labels, gt_boxes):
-        indices = gt_labels != -1
-        gt_labels = gt_labels[indices]
-        gt_boxes = gt_boxes[indices]
-        iou = calc_iou(self.anchors.boxes, gt_boxes)
-        iou_max, iou_argmax = torch.max(iou, dim=1)
-        # everything is correct up to this point
-        positive_indices = torch.ge(iou_max, self.threshold)
-        num_positive_anchors = positive_indices.sum()
-        assigned_annotations = gt_labels[iou_argmax, :]
+    def _unpack_labels(self, labels):
+        labels_unpacked = []
+        anchors = self.anchors
+        count = 0
+        for level in range(anchors.min_level, anchors.max_level + 1):
+            feat_size = int(anchors.image_size / 2 ** level)
+            steps = feat_size ** 2 * anchors.get_anchors_per_location()
+            indices = torch.arange(count, count + steps, device=labels.device)
+            count += steps
+            labels_unpacked.append(
+                torch.index_select(labels, 0, indices).view([feat_size, feat_size, -1]))
+        return labels_unpacked
 
+    def label_anchors(self, gt_labels, gt_boxes):
+        device = gt_boxes.device
+        indices = gt_labels != -1
+        labels = gt_labels[indices]
+        boxes = gt_boxes[indices]
+        iou = calc_iou(self.anchors.boxes, boxes)
+
+        cls_target = torch.zeros(
+            self.anchors.boxes.shape[0], self.num_classes, device=device)
+        box_target = torch.zeros(
+            self.anchors.boxes.shape[0], 4, device=device)
+        num_positive_anchors = 0
+
+        if iou.nelement() != 0:
+            iou_max, iou_argmax = torch.max(iou, dim=1)
+            positive_indices = torch.ge(iou_max, self.threshold)
+            num_positive_anchors = positive_indices.sum()
+            assigned_boxes = boxes[iou_argmax, :]
+            assigned_labels = labels[iou_argmax]
+
+            cls_target[positive_indices, assigned_labels[positive_indices].long()] = 1
+            box_target[positive_indices, :] = encode_boxes_to_anchors(
+                assigned_boxes[positive_indices], self.anchors.boxes[positive_indices])
+
+        cls_target -= 1
+        cls_target = cls_target.long()
+
+        cls_target = self._unpack_labels(cls_target)
+        box_target = self._unpack_labels(box_target)
 
         return cls_target, box_target, num_positive_anchors

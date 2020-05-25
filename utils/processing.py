@@ -44,7 +44,7 @@ def preprocess(img_paths: list):
         Args:
             img_paths (list): list of image paths to be formed into a batch
     """
-    images, scales = [], []
+    images, sizes, scales = [], [], []
     resizer = Resizer(cfg.MODEL.IMAGE_SIZE)
     to_numpy = ImageToNumpy()
     normalizer = Normalizer()
@@ -52,6 +52,7 @@ def preprocess(img_paths: list):
 
     for img_path in img_paths:
         pil_img = Image.open(img_path).convert('RGB')
+        sizes.append(pil_img.size)
         pil_img, annos = resizer(pil_img, {})
         scale = annos['scale']
 
@@ -63,4 +64,4 @@ def preprocess(img_paths: list):
         scales.append(scale)
 
     batch_x = torch.stack(images)
-    return batch_x, scales
+    return batch_x, sizes, scales

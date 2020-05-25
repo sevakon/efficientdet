@@ -22,7 +22,7 @@ def train(model, optimizer, loader, scheduler, criterion, ema, device, writer):
         values = [v.data.item() for v in [loss, cls_loss, box_loss]]
 
         pbar.set_description(
-            "all:{.2f} | cls:{.2f} | box:{.2f}".format(
+            "all:{0:.2f} | cls:{1:.2f} | box:{2:.2f}".format(
                 values[0], values[1], values[2]))
 
         if is_valid_number(loss.data.item()):
