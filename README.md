@@ -66,7 +66,7 @@ unzip annotations_trainval2017.zip && mv annotations data/coco && rm annotations
 ##### Run Script
 
 ```bash
-python main.py -mode 'eval' -model 'efficientdet-d{}'
+python main.py -mode eval -model efficientdet-d{} --pretrained
 ```
 
 
@@ -74,7 +74,7 @@ python main.py -mode 'eval' -model 'efficientdet-d{}'
 - [X] Model Architecture that would match the original paper
 - [X] COCO val script 
 - [X] port weights from TensorFlow 
-- [ ] COCO train script
+- [X] COCO train script
 - [ ] Reproduce results from the paper
 - [ ] Pre-trained weights release
 

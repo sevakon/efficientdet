@@ -20,6 +20,7 @@ def parse_args():
                         default='trainval', type=str)
     parser.add_argument('-model', default='efficientdet-d0', type=str)
     parser.add_argument('--experiment', type=str, default='experiment')
+    parser.add_argument('--pretrained', dest='pretrained', action='store_true')
     parser.add_argument('--cuda', dest='cuda', action='store_true')
     parser.add_argument('--cpu', dest='cuda', action='store_false')
     parser.add_argument('--device', type=int, default=0)
@@ -61,9 +62,10 @@ def main(args):
     device = torch.device('cuda:{}'.format(args.device)) \
         if args.cuda else torch.device('cpu')
 
+    model = EfficientDet.from_pretrained(args.model).to(device) \
+        if args.pretrained else EfficientDet.from_name(args.model).to(device)
+
     if args.mode == 'trainval':
-        model = EfficientDet.from_name(args.model).to(device)
-        # model = EfficientDet.from_pretrained(args.model).to(device)
         logger("Model's trainable parameters: {}".format(count_parameters(model)))
 
         loader = get_loader(path=cfg.TRAIN_SET,
@@ -88,7 +90,6 @@ def main(args):
                 ema_decay.resume(model)
 
     elif args.mode == 'eval':
-        model = EfficientDet.from_pretrained(args.model).to(device)
         validate(model, device)
 
 
