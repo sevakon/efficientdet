@@ -36,6 +36,7 @@ def train(model, optimizer, loader, scheduler, criterion, ema, device, writer):
             writer.add_scalar(f"Train/gpu memory", torch.cuda.memory_allocated(device), writer.train_step)
 
             writer.train_step += 1
+            writer.flush()
 
             clip_grad_norm_(model.parameters(), cfg.CLIP_GRADIENTS_NORM)
             optimizer.step()

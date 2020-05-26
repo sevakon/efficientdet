@@ -1,8 +1,4 @@
-import argparse
 import json
-import os
-import time
-
 import torch
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
@@ -73,5 +69,6 @@ def validate(model, device, writer=None, save_filename=None, best_score=0.0):
     if writer is not None:
         writer.add_scalar("Eval/mAP", coco_eval.stats[0], writer.eval_step)
         writer.eval_step += 1
+        writer.flush()
 
     return model, writer, best_score

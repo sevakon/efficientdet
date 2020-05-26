@@ -21,8 +21,8 @@ def count_parameters(model):
 
 
 def is_valid_number(x):
-    is_invalid = not (math.isnan(x) or math.isinf(x) or x > 1e4)
-    return not is_invalid
+    is_valid = not (math.isnan(x) or math.isinf(x) or x > 1e4)
+    return is_valid
 
 
 def get_lr(optimizer, group=0):
