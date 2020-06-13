@@ -79,6 +79,6 @@ python main.py -mode eval -model efficientdet-d{} --pretrained
 - [ ] Pre-trained weights release
 
 ### References
-- EfficientDet: Scalable and Efficient Object Detection [arXiv:1911.09070](https://arxiv.org/abs/1911.09070)
-- EfficientDet implementation in TensorFlow by [Google AutoML](https://github.com/google/automl/tree/master/efficientdet)
-- PyTorch EfficientNet implementation by [lukemelas](https://github.com/lukemelas/EfficientNet-PyTorch)
+- [[1]](https://arxiv.org/abs/1911.09070) Mingxing Tan, Ruoming Pang, Quoc V. Le. **EfficientDet: Scalable and Efficient Object Detection**
+- [[2]](https://github.com/google/automl/tree/master/efficientdet) EfficientDet implementation in TensorFlow by Google AutoML
+- [[3]](https://github.com/lukemelas/EfficientNet-PyTorch) PyTorch EfficientNet implementation by @lukemelas
